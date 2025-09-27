@@ -6,6 +6,9 @@
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
+#include <vector>
+
+#include "tools.h"
 
 //--- 아래 5개 함수는 사용자 정의 함수 임
 void make_vertexShaders();
@@ -19,6 +22,11 @@ GLint width, height;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
+
+int totalShapes = 0;					// 도형 개수
+std::vector<vertex> vertexList;			// 점 배열
+std::vector<vertex[3]> triangleList;	// 삼각형 배열
+std::vector<vertex[4]> rectList;		// 사각형 배열
 
 char* filetobuf(const char* file)
 {

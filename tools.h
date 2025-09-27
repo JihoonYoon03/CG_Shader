@@ -7,6 +7,10 @@ struct rtPos {
 	GLfloat x1, y1, x2, y2;
 };
 
+struct vertex {
+	GLfloat x, y, z;
+};
+
 struct ColorRGB {
 	GLfloat r, g, b;
 };
