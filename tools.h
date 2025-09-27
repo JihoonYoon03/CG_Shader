@@ -9,18 +9,14 @@ struct rtPos {
 };
 
 struct vertex {
-	GLfloat x, y, z;
+	GLfloat x = 0.0, y = 0.0, z = 0.0;
 };
 
-struct ColorRGB {
-	GLfloat r, g, b;
-};
-
-ColorRGB randColor();
+vertex randColor();
 rtPos randSquarePos(GLfloat offset);
 rtPos randRectPos(GLfloat offset);
 
-void mPosToGL(int mx, int my, GLfloat& xGL, GLfloat& yGL);
+void mPosToGL(GLuint width, GLuint height, int mx, int my, GLfloat& xGL, GLfloat& yGL);
 bool isMouseIn(rtPos& pos, int mx, int my);
 
 char* filetobuf(const char* file);
