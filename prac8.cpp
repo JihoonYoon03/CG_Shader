@@ -23,7 +23,7 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLuint VAO[4], VBO[4]; // VAO[도형 타입], VBO[도형 타입][정점, 색상] 선언
+GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[도형 타입][정점, 색상] 선언
 
 int currentShape = -1, totalShapes = 0;					// 도형 개수
 std::vector<std::array<vertex, 2>> vertexList;			// 점 배열
@@ -35,6 +35,7 @@ unsigned int rectIndice[6] = { 0,1,2, 0,2,3 }; // 사각형 인덱스 배열
 
 void updateVBO(int targetVBO) {
 
+	glBindVertexArray(VAO[targetVBO]); // i번째 VAO를 바인드하기
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[targetVBO]);
 
 	switch (targetVBO) {
@@ -45,10 +46,23 @@ void updateVBO(int targetVBO) {
 		glBufferData(GL_ARRAY_BUFFER, lineList.size() * sizeof(std::array<std::array<vertex, 2>, 2>), lineList.data(), GL_DYNAMIC_DRAW);
 		break;
 	case 2: // 삼각형
-		glBufferData(GL_ARRAY_BUFFER, triangleList.size() * sizeof(std::array<std::array<vertex, 3>, 2>), triangleList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, triangleList.size() * sizeof(std::array<std::array<vertex, 2>, 3>), triangleList.data(), GL_DYNAMIC_DRAW);
 		break;
 	case 3: // 사각형
-		glBufferData(GL_ARRAY_BUFFER, rectList.size() * sizeof(std::array<std::array<vertex, 4>, 2>), rectList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, rectList.size() * sizeof(std::array<std::array<vertex, 2>, 4>), rectList.data(), GL_DYNAMIC_DRAW);
+
+		std::vector<unsigned int> indices;
+		for (int i = 0; i < rectList.size(); i++) {
+			unsigned int base = i * 4;
+			indices.insert(indices.end(), {
+				base + 0, base + 1, base + 2,  // 첫 번째 삼각형
+				base + 0, base + 2, base + 3   // 두 번째 삼각형
+				});
+		}
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
+
 		break;
 	}
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
@@ -61,12 +75,14 @@ void updateVBO(int targetVBO) {
 
 void InitBuffer(GLuint VAO[], GLuint VBO[])
 {
+
 	for (int i = 0; i < 4; i++) {
 		glGenVertexArrays(1, &VAO[i]); // i번째 VAO 를 지정하고 할당하기
-		glBindVertexArray(VAO[i]); // i번째 VAO를 바인드하기
 		glGenBuffers(1, &VBO[i]); // 2개의 i번째 VBO를 지정하고 할당하기
 
+		if (i == 3) glGenBuffers(1, &EBO);
 		updateVBO(i); // i번째 VBO 업데이트하기
+		glBindVertexArray(0); // VAO 바인드 해제하기
 	}
 }
 
@@ -119,8 +135,8 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glBindVertexArray(VAO[2]);
 	glDrawArrays(GL_TRIANGLES, 0, triangleList.size() * 3);
 	 
-	//glBindVertexArray(VAO[3]); // VAO 바인드하기
-	//glDrawArrays(GL_TRIANGLES, rectIndice, 4);
+	glBindVertexArray(VAO[3]); // VAO 바인드하기
+	glDrawElements(GL_TRIANGLES, rectList.size() * 6, GL_UNSIGNED_INT, 0);
 	
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -201,14 +217,31 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				std::array<vertex, 2> point2Data = { pos2, randColor() };
 				std::array<vertex, 2> point3Data = { pos3, randColor() };
 
-				std::array<std::array<vertex, 2>, 3> lineData = { point1Data , point2Data, point3Data };
-				triangleList.push_back(lineData);
+				std::array<std::array<vertex, 2>, 3> triangleData = { point1Data , point2Data, point3Data };
+				triangleList.push_back(triangleData);
 				totalShapes++;
 				updateVBO(2);
 			}
 				break;
 			case 3: // 사각형
+			{
+				pos.x += 0.05f;
+				pos.y += 0.05f;
+
+				vertex pos2 = { pos.x - 0.1f, pos.y, 0.0f };
+				vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
+				vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
+
+				std::array<vertex, 2> point1Data = { pos, randColor() };
+				std::array<vertex, 2> point2Data = { pos2, randColor() };
+				std::array<vertex, 2> point3Data = { pos3, randColor() };
+				std::array<vertex, 2> point4Data = { pos4, randColor() };
+
+				std::array<std::array<vertex, 2>, 4> rectData = { point1Data , point2Data, point3Data, point4Data };
+				rectList.push_back(rectData);
 				totalShapes++;
+				updateVBO(3);
+			}
 				break;
 			}
 			glutPostRedisplay();
