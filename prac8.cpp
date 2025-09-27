@@ -28,8 +28,8 @@ GLuint VAO[4], VBO[4]; // VAO[도형 타입], VBO[도형 타입][정점, 색상]
 int currentShape = -1, totalShapes = 0;					// 도형 개수
 std::vector<std::array<vertex, 2>> vertexList;			// 점 배열
 std::vector<std::array<std::array<vertex, 2>, 2>> lineList;		// 선 배열
-std::vector<std::array<std::array<vertex, 3>, 2>> triangleList;	// 삼각형 배열
-std::vector<std::array<std::array<vertex, 4>, 2>> rectList;		// 사각형 배열
+std::vector<std::array<std::array<vertex, 2>, 3>> triangleList;	// 삼각형 배열
+std::vector<std::array<std::array<vertex, 2>, 4>> rectList;		// 사각형 배열
 unsigned int rectIndice[6] = { 0,1,2, 0,2,3 }; // 사각형 인덱스 배열
 
 
@@ -191,7 +191,21 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			}
 				break;
 			case 2: // 삼각형
+			{
+				pos.y += 0.05f;
+
+				vertex pos2 = { pos.x - 0.05f, pos.y - 0.1f, 0.0f };
+				vertex pos3 = { pos.x + 0.05f, pos.y - 0.1f, 0.0f };
+
+				std::array<vertex, 2> point1Data = { pos, randColor() };
+				std::array<vertex, 2> point2Data = { pos2, randColor() };
+				std::array<vertex, 2> point3Data = { pos3, randColor() };
+
+				std::array<std::array<vertex, 2>, 3> lineData = { point1Data , point2Data, point3Data };
+				triangleList.push_back(lineData);
 				totalShapes++;
+				updateVBO(2);
+			}
 				break;
 			case 3: // 사각형
 				totalShapes++;
