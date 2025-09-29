@@ -26,8 +26,8 @@ GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[정점, 색상] 선언
 
 int currentShape = -1, totalShapes = 0;					// 도형 개수
-Vertex vertexList[20];			// 점 배열 (정점 + 색상, 10개)
-std::vector<std::array<std::array<Vertex, 2>, 2>> lineList;		// 선 배열
+Vertex vertexList[20];		// 점 배열 (정점 + 색상, 10개)
+Vertex lineList[40];		// 선 배열 ((정점 + 색상) * 2, 40개)
 std::vector<std::array<std::array<Vertex, 2>, 3>> triangleList;	// 삼각형 배열
 std::vector<std::array<std::array<Vertex, 2>, 4>> rectList;		// 사각형 배열
 unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
@@ -44,7 +44,7 @@ void updateVBO(int targetVBO) {
 		glBufferData(GL_ARRAY_BUFFER, vertexListSize * 2 * sizeof(Vertex), vertexList, GL_DYNAMIC_DRAW);
 		break;
 	case 1:	// 선
-		glBufferData(GL_ARRAY_BUFFER, lineList.size() * sizeof(std::array<std::array<Vertex, 2>, 2>), lineList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, lineListSize * 4 * sizeof(Vertex), lineList, GL_DYNAMIC_DRAW);
 		break;
 	case 2: // 삼각형
 		glBufferData(GL_ARRAY_BUFFER, triangleList.size() * sizeof(std::array<std::array<Vertex, 2>, 3>), triangleList.data(), GL_DYNAMIC_DRAW);
@@ -66,11 +66,11 @@ void updateVBO(int targetVBO) {
 
 		break;
 	}
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)(sizeof(Vertex)));
 	glEnableVertexAttribArray(1);
 }
 
@@ -131,7 +131,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 
 	glBindVertexArray(VAO[1]);
 	glLineWidth(3.0);
-	glDrawArrays(GL_LINES, 0, lineList.size() * 2);
+	glDrawArrays(GL_LINES, 0, lineListSize * 2);
 
 	glBindVertexArray(VAO[2]);
 	glDrawArrays(GL_TRIANGLES, 0, triangleList.size() * 3);
@@ -199,11 +199,11 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 				Vertex pos2 = { pos.x + 0.1f, pos.y - 0.1f, 0.0f };
 
-				std::array<Vertex, 2> point1Data = { pos, randColor() };
-				std::array<Vertex, 2> point2Data = { pos2, randColor() };
-
-				std::array<std::array<Vertex, 2>, 2> lineData =	{ point1Data , point2Data };
-				lineList.push_back(lineData);
+				lineList[lineListSize * 4] = pos;
+				lineList[lineListSize * 4 + 1] = randColor();
+				lineList[lineListSize * 4 + 2] = pos2;
+				lineList[lineListSize * 4 + 3] = randColor();
+				lineListSize++;
 				totalShapes++;
 				updateVBO(1);
 			}
