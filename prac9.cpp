@@ -21,25 +21,20 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLuint VAO[4], VBO[4]; // VAO[도형 타입], VBO[정점, 색상] 선언
+GLuint VAO[4], VBO[4]; // VAO[도형 타입], VBO[정점, 색상]
+std::vector<Vertex> triangles[4];	// 사분면 별 삼각형
+int totalShapes = 0, selectedQuadrant = 0, selectedIndex = 0;	// 도형 개수
 
-int currentShape = -1, totalShapes = 0, selectedIndex = 0;	// 도형 개수
-Vertex triangleList[60];
-unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
-GLfloat moveX = 0.0f, moveY = 0.0f;
-
-
-void updateVBO(int targetVBO) {
-
+void updateVABO(int targetVBO) {
 	glBindVertexArray(VAO[targetVBO]); // i번째 VAO를 바인드하기
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[targetVBO]);
 
-	glBufferData(GL_ARRAY_BUFFER, triangleListSize * 6 * sizeof(Vertex), triangleList, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, triangles[targetVBO].size() * sizeof(Vertex), triangles->data(), GL_DYNAMIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Vertex), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)(sizeof(Vertex)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Vertex), (void*)(3 * sizeof(Vertex)));
 	glEnableVertexAttribArray(1);
 }
 
@@ -50,7 +45,7 @@ void InitBuffer(GLuint VAO[], GLuint VBO[])
 		glGenVertexArrays(1, &VAO[i]); // i번째 VAO 를 지정하고 할당하기
 		glGenBuffers(1, &VBO[i]); // 2개의 i번째 VBO를 지정하고 할당하기
 
-		updateVBO(i); // i번째 VBO 업데이트하기
+		updateVABO(i); // i번째 VBO 업데이트하기
 		glBindVertexArray(0); // VAO 바인드 해제하기
 	}
 }
@@ -93,8 +88,10 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
-	glBindVertexArray(VAO[2]);
-	glDrawArrays(GL_TRIANGLES, 0, triangleListSize * 3);
+	/*for (auto& vao : VAO) {
+		glBindVertexArray(vao);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+	}*/
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -122,9 +119,28 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 
 GLvoid Mouse(int button, int state, int mx, int my)
 {
-	switch (button)
-	{
+	switch (button) {
 	case GLUT_LEFT_BUTTON:
+		if (state == GLUT_DOWN) {
+			GLfloat xGL, yGL;
+			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
+			if (xGL > 0.0f) {
+				if (yGL > 0.0f) {	// 1사분면
+
+				}
+				else {	// 4사분면
+
+				}
+			}
+			else {
+				if (yGL > 0.0f) {	// 2사분면
+
+				}
+				else {	// 3사분면
+
+				}
+			}
+		}
 		break;
 	}
 }

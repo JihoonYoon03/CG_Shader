@@ -34,7 +34,7 @@ unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectLis
 GLfloat moveX = 0.0f, moveY = 0.0f;
 
 
-void updateVBO(int targetVBO) {
+void updateVABO(int targetVBO) {
 
 	glBindVertexArray(VAO[targetVBO]); // i번째 VAO를 바인드하기
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[targetVBO]);
@@ -82,7 +82,7 @@ void InitBuffer(GLuint VAO[], GLuint VBO[])
 		glGenBuffers(1, &VBO[i]); // 2개의 i번째 VBO를 지정하고 할당하기
 
 		if (i == 3) glGenBuffers(1, &EBO);
-		updateVBO(i); // i번째 VBO 업데이트하기
+		updateVABO(i); // i번째 VBO 업데이트하기
 		glBindVertexArray(0); // VAO 바인드 해제하기
 	}
 }
@@ -272,7 +272,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					vertexList[vertexListSize * 2 + 1] = randColor();
 					vertexListSize++;
 					totalShapes++;
-					updateVBO(0);
+					updateVABO(0);
 				}
 				break;
 				case 1: // 선
@@ -288,7 +288,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					lineList[lineListSize * 4 + 3] = randColor();
 					lineListSize++;
 					totalShapes++;
-					updateVBO(1);
+					updateVABO(1);
 				}
 				break;
 				case 2: // 삼각형
@@ -306,7 +306,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					triangleList[triangleListSize * 6 + 5] = randColor();
 					triangleListSize++;
 					totalShapes++;
-					updateVBO(2);
+					updateVABO(2);
 				}
 				break;
 				case 3: // 사각형
@@ -328,7 +328,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					rectList[rectListSize * 8 + 7] = randColor();
 					rectListSize++;
 					totalShapes++;
-					updateVBO(3);
+					updateVABO(3);
 				}
 				break;
 				}
@@ -401,28 +401,28 @@ GLvoid Timer(int value) {
 		vertexList[selectedIndex * 2].y += moveY;
 		vertexList[selectedIndex * 2 + 1].x += moveX;
 		vertexList[selectedIndex * 2 + 1].y += moveY;
-		updateVBO(0);
+		updateVABO(0);
 		break;
 	case 1: // 선
 		for (int i = 0; i < 2; i++) {
 			lineList[selectedIndex * 4 + i * 2].x += moveX;
 			lineList[selectedIndex * 4 + i * 2].y += moveY;
 		}
-		updateVBO(1);
+		updateVABO(1);
 		break;
 	case 2: // 삼각형
 		for (int i = 0; i < 3; i++) {
 			triangleList[selectedIndex * 6 + i * 2].x += moveX;
 			triangleList[selectedIndex * 6 + i * 2].y += moveY;
 		}
-		updateVBO(2);
+		updateVABO(2);
 		break;
 	case 3: // 사각형
 		for (int i = 0; i < 4; i++) {
 			rectList[selectedIndex * 8 + i * 2].x += moveX;
 			rectList[selectedIndex * 8 + i * 2].y += moveY;
 		}
-		updateVBO(3);
+		updateVABO(3);
 		break;
 	}
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
