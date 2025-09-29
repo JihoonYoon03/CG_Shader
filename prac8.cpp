@@ -7,8 +7,6 @@
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 #include <vector>
-#include <array>
-
 #include "tools.h"
 
 //--- 아래 5개 함수는 사용자 정의 함수 임
@@ -49,7 +47,7 @@ void updateVBO(int targetVBO) {
 		glBufferData(GL_ARRAY_BUFFER, triangleListSize * 6 * sizeof(Vertex), triangleList, GL_DYNAMIC_DRAW);
 		break;
 	case 3: // 사각형
-		glBufferData(GL_ARRAY_BUFFER, rectListSize * 8 * sizeof(std::array<std::array<Vertex, 2>, 4>), rectList, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, rectListSize * 8 * sizeof(Vertex), rectList, GL_DYNAMIC_DRAW);
 
 		std::vector<unsigned int> indices;
 		for (int i = 0; i < rectListSize; i++) {
