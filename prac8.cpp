@@ -13,7 +13,9 @@
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
+GLvoid KeyboardUp(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int mx, int my);
+GLvoid Timer(int value);
 
 //--- 필요한 변수 선언
 GLint winWidth = 800, winHeight = 600;
@@ -23,12 +25,13 @@ GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
 GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[정점, 색상] 선언
 
-int currentShape = -1, totalShapes = 0, selectedShape = -1;	// 도형 개수
+int currentShape = -1, totalShapes = 0, selectedIndex = 0;	// 도형 개수
 Vertex vertexList[20];		// 점 배열 ((정점1 + 색상1) * 10개)
 Vertex lineList[40];		// 선 배열 ((정점1 + 색상1) * 2 * 10개)
 Vertex triangleList[60];	// 삼각형 배열 ((정점1 + 색상1) * 3 * 10개)
 Vertex rectList[80];		// 사각형 배열 ((정점1 + 색상1) * 4 * 10개)
 unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
+GLfloat moveX = 0.0f, moveY = 0.0f;
 
 
 void updateVBO(int targetVBO) {
@@ -66,7 +69,7 @@ void updateVBO(int targetVBO) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	
+
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)(sizeof(Vertex)));
 	glEnableVertexAttribArray(1);
 }
@@ -109,7 +112,9 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
+	glutKeyboardUpFunc(KeyboardUp);
 	glutMouseFunc(Mouse);
+	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 	glutMainLoop();
 }
 
@@ -132,10 +137,10 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 
 	glBindVertexArray(VAO[2]);
 	glDrawArrays(GL_TRIANGLES, 0, triangleListSize * 3);
-	 
+
 	glBindVertexArray(VAO[3]); // VAO 바인드하기
 	glDrawElements(GL_TRIANGLES, rectListSize * 6, GL_UNSIGNED_INT, 0);
-	
+
 	glutSwapBuffers(); // 화면에 출력하기
 }
 
@@ -163,6 +168,86 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case 'r':
 		currentShape = 3;
 		std::cout << "rectangle selected" << std::endl;
+		break;
+	case 'w':
+		if (moveY == 0.0f) moveY += 0.01f;
+		break;
+	case 'a':
+		if (moveX == 0.0f) moveX -= 0.01f;
+		break;
+	case 's':
+		if (moveY == 0.0f) moveY -= 0.01f;
+		break;
+	case 'd':
+		if (moveX == 0.0f) moveX += 0.01f;
+		break;
+	case 'y':
+		if (moveX == 0.0f) moveX -= 0.01f;
+		if (moveY == 0.0f) moveY += 0.01f;
+		break;
+	case 'b':
+		if (moveX == 0.0f) moveX -= 0.01f;
+		if (moveY == 0.0f) moveY -= 0.01f;
+		break;
+	case 'm':
+		if (moveX == 0.0f) moveX += 0.01f;
+		if (moveY == 0.0f) moveY -= 0.01f;
+		break;
+	case 'i':
+		if (moveX == 0.0f) moveX += 0.01f;
+		if (moveY == 0.0f) moveY += 0.01f;
+		break;
+	case 'c':
+		currentShape = -1;
+		selectedIndex = 0;
+		totalShapes = 0;
+		moveX = 0.0f; moveY = 0.0f;
+
+		for (auto& val : vertexList) val = { 0 };
+		for (auto& val : lineList) val = { 0 };
+		for (auto& val : triangleList) val = { 0 };
+		for (auto& val : rectList) val = { 0 };
+		vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
+		moveX = 0.0f, moveY = 0.0f;
+
+		glutPostRedisplay();
+		break;
+	case 'q':
+		glutLeaveMainLoop();
+		return;
+	}
+}
+
+GLvoid KeyboardUp(unsigned char key, int x, int y)
+{
+	switch (key) {
+	case 'w':
+		if (moveY >= 0.01f) moveY -= 0.01f;
+		break;
+	case 'a':
+		if (moveX <= -0.01f) moveX += 0.01f;
+		break;
+	case 's':
+		if (moveY <= -0.01f) moveY += 0.01f;
+		break;
+	case 'd':
+		if (moveX >= 0.01f) moveX -= 0.01f;
+		break;
+	case 'y':
+		if (moveX <= -0.01f) moveX += 0.01f;
+		if (moveY >= 0.01f) moveY -= 0.01f;
+		break;
+	case 'b':
+		if (moveX <= -0.01f) moveX += 0.01f;
+		if (moveY <= -0.01f) moveY += 0.01f;
+		break;
+	case 'm':
+		if (moveX >= 0.01f) moveX -= 0.01f;
+		if (moveY <= -0.01f) moveY += 0.01f;
+		break;
+	case 'i':
+		if (moveX >= 0.01f) moveX -= 0.01f;
+		if (moveY >= 0.01f) moveY -= 0.01f;
 		break;
 	}
 }
@@ -256,7 +341,8 @@ GLvoid Mouse(int button, int state, int mx, int my)
 										rectList[i * 8 + 4].y + (rectList[i * 8].y - rectList[i * 8 + 4].y) / 2.0f, 0.0f };
 
 					if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
-						selectedShape = i;
+						currentShape = 3;
+						selectedIndex = i;
 						std::cout << "rectangle selected" << std::endl;
 						checked = true;
 						break;
@@ -268,7 +354,8 @@ GLvoid Mouse(int button, int state, int mx, int my)
 						Vertex center = { triangleList[i * 6].x,
 										  triangleList[i * 6 + 2].y + (triangleList[i * 6].y - triangleList[i * 6 + 2].y) / 2.0f, 0.0f };
 						if (checkCollide(center, winWidth, winHeight, 0.04f, mx, my)) {
-							selectedShape = i;
+							currentShape = 2;
+							selectedIndex = i;
 							std::cout << "triangle selected" << std::endl;
 							checked = true;
 							break;
@@ -281,7 +368,8 @@ GLvoid Mouse(int button, int state, int mx, int my)
 						Vertex center = { lineList[i * 4].x + (lineList[i * 4 + 2].x - lineList[i * 4].x) / 2.0f,
 										  lineList[i * 4 + 2].y + (lineList[i * 4].y - lineList[i * 4 + 2].y) / 2.0f, 0.0f };
 						if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
-							selectedShape = i;
+							currentShape = 1;
+							selectedIndex = i;
 							std::cout << "line selected" << std::endl;
 							checked = true;
 							break;
@@ -292,7 +380,8 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				if (!checked) {
 					for (int i = 0; i < vertexListSize; i++) {
 						if (checkCollide(vertexList[i * 2], winWidth, winHeight, 0.02f, mx, my)) {
-							selectedShape = i;
+							currentShape = 0;
+							selectedIndex = i;
 							std::cout << "point selected" << std::endl;
 							break;
 						}
@@ -303,4 +392,39 @@ GLvoid Mouse(int button, int state, int mx, int my)
 		}
 		break;
 	}
+}
+
+GLvoid Timer(int value) {
+	switch (currentShape) {
+	case 0: // 점
+		vertexList[selectedIndex * 2].x += moveX;
+		vertexList[selectedIndex * 2].y += moveY;
+		vertexList[selectedIndex * 2 + 1].x += moveX;
+		vertexList[selectedIndex * 2 + 1].y += moveY;
+		updateVBO(0);
+		break;
+	case 1: // 선
+		for (int i = 0; i < 2; i++) {
+			lineList[selectedIndex * 4 + i * 2].x += moveX;
+			lineList[selectedIndex * 4 + i * 2].y += moveY;
+		}
+		updateVBO(1);
+		break;
+	case 2: // 삼각형
+		for (int i = 0; i < 3; i++) {
+			triangleList[selectedIndex * 6 + i * 2].x += moveX;
+			triangleList[selectedIndex * 6 + i * 2].y += moveY;
+		}
+		updateVBO(2);
+		break;
+	case 3: // 사각형
+		for (int i = 0; i < 4; i++) {
+			rectList[selectedIndex * 8 + i * 2].x += moveX;
+			rectList[selectedIndex * 8 + i * 2].y += moveY;
+		}
+		updateVBO(3);
+		break;
+	}
+	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
+	glutPostRedisplay();
 }
