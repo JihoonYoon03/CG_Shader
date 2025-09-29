@@ -29,9 +29,8 @@ int currentShape = -1, totalShapes = 0;					// 도형 개수
 Vertex vertexList[20];		// 점 배열 ((정점1 + 색상1) * 10개)
 Vertex lineList[40];		// 선 배열 ((정점1 + 색상1) * 2 * 10개)
 Vertex triangleList[60];	// 삼각형 배열 ((정점1 + 색상1) * 3 * 10개)
-std::vector<std::array<std::array<Vertex, 2>, 4>> rectList;		// 사각형 배열
+Vertex rectList[80];		// 사각형 배열 ((정점1 + 색상1) * 4 * 10개)
 unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
-unsigned int rectIndice[6] = { 0,1,2, 0,2,3 }; // 사각형 인덱스 배열
 
 
 void updateVBO(int targetVBO) {
@@ -50,10 +49,10 @@ void updateVBO(int targetVBO) {
 		glBufferData(GL_ARRAY_BUFFER, triangleListSize * 6 * sizeof(Vertex), triangleList, GL_DYNAMIC_DRAW);
 		break;
 	case 3: // 사각형
-		glBufferData(GL_ARRAY_BUFFER, rectList.size() * sizeof(std::array<std::array<Vertex, 2>, 4>), rectList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, rectListSize * 8 * sizeof(std::array<std::array<Vertex, 2>, 4>), rectList, GL_DYNAMIC_DRAW);
 
 		std::vector<unsigned int> indices;
-		for (int i = 0; i < rectList.size(); i++) {
+		for (int i = 0; i < rectListSize; i++) {
 			unsigned int base = i * 4;
 			indices.insert(indices.end(), {
 				base + 0, base + 1, base + 2,  // 첫 번째 삼각형
@@ -137,7 +136,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glDrawArrays(GL_TRIANGLES, 0, triangleListSize * 3);
 	 
 	glBindVertexArray(VAO[3]); // VAO 바인드하기
-	glDrawElements(GL_TRIANGLES, rectList.size() * 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, rectListSize * 6, GL_UNSIGNED_INT, 0);
 	
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -235,13 +234,15 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				Vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
 				Vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
 
-				std::array<Vertex, 2> point1Data = { pos, randColor() };
-				std::array<Vertex, 2> point2Data = { pos2, randColor() };
-				std::array<Vertex, 2> point3Data = { pos3, randColor() };
-				std::array<Vertex, 2> point4Data = { pos4, randColor() };
-
-				std::array<std::array<Vertex, 2>, 4> rectData = { point1Data , point2Data, point3Data, point4Data };
-				rectList.push_back(rectData);
+				rectList[rectListSize * 8] = pos;
+				rectList[rectListSize * 8 + 1] = randColor();
+				rectList[rectListSize * 8 + 2] = pos2;
+				rectList[rectListSize * 8 + 3] = randColor();
+				rectList[rectListSize * 8 + 4] = pos3;
+				rectList[rectListSize * 8 + 5] = randColor();
+				rectList[rectListSize * 8 + 6] = pos4;
+				rectList[rectListSize * 8 + 7] = randColor();
+				rectListSize++;
 				totalShapes++;
 				updateVBO(3);
 			}
