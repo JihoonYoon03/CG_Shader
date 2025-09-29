@@ -23,7 +23,7 @@ GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
 GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[정점, 색상] 선언
 
-int currentShape = -1, totalShapes = 0;					// 도형 개수
+int currentShape = -1, totalShapes = 0, selectedShape = -1;	// 도형 개수
 Vertex vertexList[20];		// 점 배열 ((정점1 + 색상1) * 10개)
 Vertex lineList[40];		// 선 배열 ((정점1 + 색상1) * 2 * 10개)
 Vertex triangleList[60];	// 삼각형 배열 ((정점1 + 색상1) * 3 * 10개)
@@ -172,79 +172,129 @@ GLvoid Mouse(int button, int state, int mx, int my)
 	switch (button)
 	{
 	case GLUT_LEFT_BUTTON:
-		if (state == GLUT_DOWN && totalShapes < 10) {
-			Vertex pos;
-			mPosToGL(winWidth, winHeight, mx, my, pos.x, pos.y);
-			switch (currentShape)
-			{
-			case -1:
-				std::cout << "shape didn't selected" << std::endl;
+		if (state == GLUT_DOWN) {
+			if (totalShapes < 10) {
+				Vertex pos;
+				mPosToGL(winWidth, winHeight, mx, my, pos.x, pos.y);
+				switch (currentShape)
+				{
+				case -1:
+					std::cout << "shape didn't selected" << std::endl;
+					break;
+				case 0: // 점
+				{
+					vertexList[vertexListSize * 2] = pos;
+					vertexList[vertexListSize * 2 + 1] = randColor();
+					vertexListSize++;
+					totalShapes++;
+					updateVBO(0);
+				}
 				break;
-			case 0: // 점
-			{
-				vertexList[vertexListSize * 2] = pos;
-				vertexList[vertexListSize * 2 + 1] = randColor();
-				vertexListSize++;
-				totalShapes++;
-				updateVBO(0);
+				case 1: // 선
+				{
+					pos.x -= 0.05f;
+					pos.y += 0.05f;
+
+					Vertex pos2 = { pos.x + 0.1f, pos.y - 0.1f, 0.0f };
+
+					lineList[lineListSize * 4] = pos;
+					lineList[lineListSize * 4 + 1] = randColor();
+					lineList[lineListSize * 4 + 2] = pos2;
+					lineList[lineListSize * 4 + 3] = randColor();
+					lineListSize++;
+					totalShapes++;
+					updateVBO(1);
+				}
+				break;
+				case 2: // 삼각형
+				{
+					pos.y += 0.05f;
+
+					Vertex pos2 = { pos.x - 0.05f, pos.y - 0.1f, 0.0f };
+					Vertex pos3 = { pos.x + 0.05f, pos.y - 0.1f, 0.0f };
+
+					triangleList[triangleListSize * 6] = pos;
+					triangleList[triangleListSize * 6 + 1] = randColor();
+					triangleList[triangleListSize * 6 + 2] = pos2;
+					triangleList[triangleListSize * 6 + 3] = randColor();
+					triangleList[triangleListSize * 6 + 4] = pos3;
+					triangleList[triangleListSize * 6 + 5] = randColor();
+					triangleListSize++;
+					totalShapes++;
+					updateVBO(2);
+				}
+				break;
+				case 3: // 사각형
+				{
+					pos.x += 0.05f;
+					pos.y += 0.05f;
+
+					Vertex pos2 = { pos.x - 0.1f, pos.y, 0.0f };
+					Vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
+					Vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
+
+					rectList[rectListSize * 8] = pos;
+					rectList[rectListSize * 8 + 1] = randColor();
+					rectList[rectListSize * 8 + 2] = pos2;
+					rectList[rectListSize * 8 + 3] = randColor();
+					rectList[rectListSize * 8 + 4] = pos3;
+					rectList[rectListSize * 8 + 5] = randColor();
+					rectList[rectListSize * 8 + 6] = pos4;
+					rectList[rectListSize * 8 + 7] = randColor();
+					rectListSize++;
+					totalShapes++;
+					updateVBO(3);
+				}
+				break;
+				}
 			}
-				break;
-			case 1: // 선
-			{
-				pos.x -= 0.05f;
-				pos.y += 0.05f;
 
-				Vertex pos2 = { pos.x + 0.1f, pos.y - 0.1f, 0.0f };
+			else if (totalShapes == 10) {
+				bool checked = false;
+				for (int i = 0; i < rectListSize; i++) {
+					Vertex center = {	(rectList[i * 4].x + rectList[i * 4 + 2].x) / 2.0f,
+										(rectList[i * 4].y + rectList[i * 4 + 2].y) / 2.0f, 0.0f };
 
-				lineList[lineListSize * 4] = pos;
-				lineList[lineListSize * 4 + 1] = randColor();
-				lineList[lineListSize * 4 + 2] = pos2;
-				lineList[lineListSize * 4 + 3] = randColor();
-				lineListSize++;
-				totalShapes++;
-				updateVBO(1);
-			}
-				break;
-			case 2: // 삼각형
-			{
-				pos.y += 0.05f;
+					if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+						selectedShape = i;
+						std::cout << "rectangle selected" << std::endl;
+						checked = true;
+						break;
+					}
+				}
 
-				Vertex pos2 = { pos.x - 0.05f, pos.y - 0.1f, 0.0f };
-				Vertex pos3 = { pos.x + 0.05f, pos.y - 0.1f, 0.0f };
+				if (!checked) {
+					for (int i = 0; i < triangleListSize; i++) {
+						Vertex center = { triangleList[i * 3].x, (triangleList[i * 3].y + triangleList[i * 3 + 2].y) / 2.0f, 0.0f };
+						if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+							selectedShape = i;
+							std::cout << "triangle selected" << std::endl;
+							break;
+						}
+					}
+				}
 
-				triangleList[triangleListSize * 6] = pos;
-				triangleList[triangleListSize * 6 + 1] = randColor();
-				triangleList[triangleListSize * 6 + 2] = pos2;
-				triangleList[triangleListSize * 6 + 3] = randColor();
-				triangleList[triangleListSize * 6 + 4] = pos3;
-				triangleList[triangleListSize * 6 + 5] = randColor();
-				triangleListSize++;
-				totalShapes++;
-				updateVBO(2);
-			}
-				break;
-			case 3: // 사각형
-			{
-				pos.x += 0.05f;
-				pos.y += 0.05f;
+				if (!checked) {
+					for (int i = 0; i < lineListSize; i++) {
+						Vertex center = { (lineList[i * 2].x + lineList[i * 2 + 1].x) / 2.0f,
+										   (lineList[i * 2].y + lineList[i * 2 + 1].y) / 2.0f, 0.0f };
+						if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+							selectedShape = i;
+							std::cout << "line selected" << std::endl;
+							break;
+						}
+					}
+				}
 
-				Vertex pos2 = { pos.x - 0.1f, pos.y, 0.0f };
-				Vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
-				Vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
-
-				rectList[rectListSize * 8] = pos;
-				rectList[rectListSize * 8 + 1] = randColor();
-				rectList[rectListSize * 8 + 2] = pos2;
-				rectList[rectListSize * 8 + 3] = randColor();
-				rectList[rectListSize * 8 + 4] = pos3;
-				rectList[rectListSize * 8 + 5] = randColor();
-				rectList[rectListSize * 8 + 6] = pos4;
-				rectList[rectListSize * 8 + 7] = randColor();
-				rectListSize++;
-				totalShapes++;
-				updateVBO(3);
-			}
-				break;
+				if (!checked) {
+					for (int i = 0; i < vertexListSize; i++) {
+						if (checkCollide(vertexList[i * 2], winWidth, winHeight, 0.02f, mx, my)) {
+							selectedShape = i;
+							std::cout << "point selected" << std::endl;
+							break;
+						}
+					}
+				}
 			}
 			glutPostRedisplay();
 		}

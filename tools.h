@@ -17,7 +17,8 @@ rtPos randSquarePos(GLfloat offset);
 rtPos randRectPos(GLfloat offset);
 
 void mPosToGL(GLuint width, GLuint height, int mx, int my, GLfloat& xGL, GLfloat& yGL);
-bool isMouseIn(rtPos& pos, int mx, int my);
+bool isMouseIn(rtPos& pos, GLuint width, GLuint height, int mx, int my);
+bool checkCollide(Vertex& center, GLuint width, GLuint height, GLfloat distCap, int mx, int my);
 
 char* filetobuf(const char* file);
 void make_vertexShaders(GLuint& vertexShader);

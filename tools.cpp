@@ -43,6 +43,16 @@ bool isMouseIn(rtPos& pos, GLuint width, GLuint height, int mx, int my)
 	else return false;
 }
 
+bool checkCollide(Vertex& center, GLuint width, GLuint height, GLfloat distCap, int mx, int my) {
+	GLfloat xGL, yGL;
+	mPosToGL(width, height, mx, my, xGL, yGL);
+	GLfloat dist = sqrt((center.x - xGL) * (center.x - xGL) + (center.y - yGL) * (center.y - yGL));
+	if (dist < distCap) {
+		return true;
+	}
+	return false;
+}
+
 char* filetobuf(const char* file)
 {
 	FILE* fptr;
