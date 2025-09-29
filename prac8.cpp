@@ -252,10 +252,10 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			else if (totalShapes == 10) {
 				bool checked = false;
 				for (int i = 0; i < rectListSize; i++) {
-					Vertex center = {	(rectList[i * 4].x + rectList[i * 4 + 2].x) / 2.0f,
-										(rectList[i * 4].y + rectList[i * 4 + 2].y) / 2.0f, 0.0f };
+					Vertex center = { rectList[i * 4 + 2].x + (rectList[i * 4].x - rectList[i * 4 + 2].x) / 2.0f,
+										rectList[i * 4 + 4].y + (rectList[i * 4].y - rectList[i * 4 + 4].y) / 2.0f, 0.0f };
 
-					if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+					if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
 						selectedShape = i;
 						std::cout << "rectangle selected" << std::endl;
 						checked = true;
@@ -265,10 +265,12 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 				if (!checked) {
 					for (int i = 0; i < triangleListSize; i++) {
-						Vertex center = { triangleList[i * 3].x, (triangleList[i * 3].y + triangleList[i * 3 + 2].y) / 2.0f, 0.0f };
-						if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+						Vertex center = { triangleList[i * 3].x,
+										  triangleList[i * 3 + 2].y + (triangleList[i * 3].y - triangleList[i * 3 + 2].y) / 2.0f, 0.0f };
+						if (checkCollide(center, winWidth, winHeight, 0.04f, mx, my)) {
 							selectedShape = i;
 							std::cout << "triangle selected" << std::endl;
+							checked = true;
 							break;
 						}
 					}
@@ -276,11 +278,12 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 				if (!checked) {
 					for (int i = 0; i < lineListSize; i++) {
-						Vertex center = { (lineList[i * 2].x + lineList[i * 2 + 1].x) / 2.0f,
-										   (lineList[i * 2].y + lineList[i * 2 + 1].y) / 2.0f, 0.0f };
-						if (checkCollide(center, winWidth, winHeight, 0.02f, mx, my)) {
+						Vertex center = { lineList[i * 2].x + (lineList[i * 2 + 2].x - lineList[i * 2].x) / 2.0f,
+										  lineList[i * 2 + 2].y + (lineList[i * 2].y - lineList[i * 2 + 2].y) / 2.0f, 0.0f };
+						if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
 							selectedShape = i;
 							std::cout << "line selected" << std::endl;
+							checked = true;
 							break;
 						}
 					}
