@@ -14,6 +14,7 @@ GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int mx, int my);
+void makeTriangle(std::vector<Vertex>& triangle, GLfloat x, GLfloat y);
 
 //--- 필요한 변수 선언
 GLint winWidth = 800, winHeight = 600;
@@ -106,8 +107,10 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
 	case 'a':
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
 	case 'b':
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		break;
 	case 'c':
 		break;
@@ -122,25 +125,87 @@ GLvoid Mouse(int button, int state, int mx, int my)
 	switch (button) {
 	case GLUT_LEFT_BUTTON:
 		if (state == GLUT_DOWN) {
-			GLfloat xGL, yGL;
+			GLfloat xGL, yGL, randX, randY;
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 			if (xGL > 0.0f) {
 				if (yGL > 0.0f) {	// 1사분면
+					triangles[0].clear();
 
+					// 랜덤 중심점 좌표
+					randX = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;	// 0.2 ~ 0.8, 최대 폭은 0.4임
+					randY = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;	// 0.2 ~ 0.8, 최대 높이는 0.4임
+					makeTriangle(triangles[0], randX, randY);
 				}
-				else {	// 4사분면
+				else {				// 4사분면
+					triangles[3].clear();
 
+					randX = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;
+					randY = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;	// -0.2 ~ -0.8
+					makeTriangle(triangles[0], randX, randY);
 				}
 			}
 			else {
 				if (yGL > 0.0f) {	// 2사분면
+					triangles[1].clear();
 
+					randX = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;	// -0.2 ~ -0.8
+					randY = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;
+					makeTriangle(triangles[1], randX, randY);
 				}
-				else {	// 3사분면
+				else {				// 3사분면
+					triangles[2].clear();
 
+					randX = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;
+					randY = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;
+					makeTriangle(triangles[2], randX, randY);
+				}
+			}
+		}
+		break;
+	case GLUT_RIGHT_BUTTON:
+		if (state == GLUT_DOWN) {
+			GLfloat xGL, yGL;
+			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
+			if (xGL > 0.0f) {
+				if (yGL > 0.0f) {	// 1사분면
+					if (triangles[0].size() < 4) {
+						if (xGL < 0.2f) xGL = 0.2f;
+						if (yGL < 0.2f) yGL = 0.2f;
+						makeTriangle(triangles[0], xGL, yGL);
+					}
+				}
+				else {				// 4사분면
+					if (triangles[3].size() < 4) {
+						if (xGL < 0.2f) xGL = 0.2f;
+						if (yGL > -0.2f) yGL = -0.2f;
+						makeTriangle(triangles[3], xGL, yGL);
+					}
+				}
+			}
+			else {
+				if (yGL > 0.0f) {	// 2사분면
+					if (triangles[1].size() < 4) {
+						if (xGL > -0.2f) xGL = -0.2f;
+						if (yGL < 0.2f) yGL = 0.2f;
+						makeTriangle(triangles[1], xGL, yGL);
+					}
+				}
+				else {				// 3사분면
+					if (triangles[2].size() < 4) {
+						if (xGL > -0.2f) xGL = -0.2f;
+						if (yGL > -0.2f) yGL = -0.2f;
+						makeTriangle(triangles[2], xGL, yGL);
+					}
 				}
 			}
 		}
 		break;
 	}
+}
+
+void makeTriangle(std::vector<Vertex>& triangle, GLfloat x, GLfloat y) {
+	GLfloat offset = rand() / static_cast<float>(RAND_MAX) * 0.2f;
+	Vertex newTriangle[4] = {
+
+	};
 }
