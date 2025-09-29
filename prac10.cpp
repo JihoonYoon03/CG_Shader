@@ -14,6 +14,7 @@ GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int mx, int my);
+GLvoid Timer(int value);
 void makeTriangle(GLfloat x, GLfloat y);
 
 //--- 필요한 변수 선언
@@ -21,6 +22,13 @@ GLint winWidth = 800, winHeight = 600;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
+
+class Triangle {
+	ColoredVertex vertex[3];
+
+public:
+
+};
 
 GLuint VAO, VBO;
 
@@ -74,6 +82,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
 	glutMouseFunc(Mouse);
+	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
 }
 
@@ -128,10 +137,12 @@ GLvoid Mouse(int button, int state, int mx, int my)
 		if (state == GLUT_DOWN && triangles.size() / 3 < 10) {
 			GLfloat xGL, yGL;
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
-			if (xGL > 0.8f) xGL = 0.8f;
-			else if (xGL < -0.8f) xGL = -0.8f;
-			if (yGL > 0.8f) yGL = 0.8f;
+
+			if		(xGL > 0.9f) xGL = 0.9f;
+			else if (xGL < -0.9f) xGL = -0.9f;
+			if		(yGL > 0.8f) yGL = 0.8f;
 			else if (yGL < -0.8f) yGL = -0.8f;
+
 			makeTriangle(xGL, yGL);
 			glutPostRedisplay();
 		}
@@ -145,8 +156,13 @@ void makeTriangle(GLfloat x, GLfloat y) {
 	Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
 
 	triangles.push_back({ x, y + offset, 0.0f, color.x, color.y, color.z });
-	triangles.push_back({ x - offset, y - offset, 0.0f, color.x, color.y, color.z });
-	triangles.push_back({ x + offset, y - offset, 0.0f, color.x, color.y, color.z });
+	triangles.push_back({ x - offset / 2, y - offset, 0.0f, color.x, color.y, color.z });
+	triangles.push_back({ x + offset / 2, y - offset, 0.0f, color.x, color.y, color.z });
 
 	updateVABO();
+}
+
+GLvoid Timer(int value) {
+	glutPostRedisplay();
+	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
