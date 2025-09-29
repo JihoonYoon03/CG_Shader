@@ -1,7 +1,7 @@
 #include "tools.h"
 
-vertex randColor() {
-	vertex color;
+Vertex randColor() {
+	Vertex color;
 	color.x = rand() / static_cast<GLfloat>(RAND_MAX);
 	color.y = rand() / static_cast<GLfloat>(RAND_MAX);
 	color.z = rand() / static_cast<GLfloat>(RAND_MAX);

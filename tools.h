@@ -8,11 +8,11 @@ struct rtPos {
 	GLfloat x1, y1, x2, y2;
 };
 
-struct vertex {
+struct Vertex {
 	GLfloat x = 0.0, y = 0.0, z = 0.0;
 };
 
-vertex randColor();
+Vertex randColor();
 rtPos randSquarePos(GLfloat offset);
 rtPos randRectPos(GLfloat offset);
 

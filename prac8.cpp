@@ -23,13 +23,14 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[도형 타입][정점, 색상] 선언
+GLuint VAO[4], VBO[4], EBO; // VAO[도형 타입], VBO[정점, 색상] 선언
 
 int currentShape = -1, totalShapes = 0;					// 도형 개수
-std::vector<std::array<vertex, 2>> vertexList;			// 점 배열
-std::vector<std::array<std::array<vertex, 2>, 2>> lineList;		// 선 배열
-std::vector<std::array<std::array<vertex, 2>, 3>> triangleList;	// 삼각형 배열
-std::vector<std::array<std::array<vertex, 2>, 4>> rectList;		// 사각형 배열
+Vertex vertexList[20];			// 점 배열 (정점 + 색상, 10개)
+std::vector<std::array<std::array<Vertex, 2>, 2>> lineList;		// 선 배열
+std::vector<std::array<std::array<Vertex, 2>, 3>> triangleList;	// 삼각형 배열
+std::vector<std::array<std::array<Vertex, 2>, 4>> rectList;		// 사각형 배열
+unsigned int vertexListSize = 0, lineListSize = 0, triangleListSize = 0, rectListSize = 0;
 unsigned int rectIndice[6] = { 0,1,2, 0,2,3 }; // 사각형 인덱스 배열
 
 
@@ -40,16 +41,16 @@ void updateVBO(int targetVBO) {
 
 	switch (targetVBO) {
 	case 0: // 점
-		glBufferData(GL_ARRAY_BUFFER, vertexList.size() * sizeof(std::array<vertex, 2>), vertexList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertexListSize * 2 * sizeof(Vertex), vertexList, GL_DYNAMIC_DRAW);
 		break;
 	case 1:	// 선
-		glBufferData(GL_ARRAY_BUFFER, lineList.size() * sizeof(std::array<std::array<vertex, 2>, 2>), lineList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, lineList.size() * sizeof(std::array<std::array<Vertex, 2>, 2>), lineList.data(), GL_DYNAMIC_DRAW);
 		break;
 	case 2: // 삼각형
-		glBufferData(GL_ARRAY_BUFFER, triangleList.size() * sizeof(std::array<std::array<vertex, 2>, 3>), triangleList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, triangleList.size() * sizeof(std::array<std::array<Vertex, 2>, 3>), triangleList.data(), GL_DYNAMIC_DRAW);
 		break;
 	case 3: // 사각형
-		glBufferData(GL_ARRAY_BUFFER, rectList.size() * sizeof(std::array<std::array<vertex, 2>, 4>), rectList.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, rectList.size() * sizeof(std::array<std::array<Vertex, 2>, 4>), rectList.data(), GL_DYNAMIC_DRAW);
 
 		std::vector<unsigned int> indices;
 		for (int i = 0; i < rectList.size(); i++) {
@@ -118,7 +119,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 //--- 출력 콜백 함수
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	vertex bgColor = { 1.0f, 1.0f, 1.0f };
+	Vertex bgColor = { 1.0f, 1.0f, 1.0f };
 
 	glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -126,7 +127,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 
 	glBindVertexArray(VAO[0]); // VAO 바인드하기
 	glPointSize(5.0);
-	glDrawArrays(GL_POINTS, 0, vertexList.size());
+	glDrawArrays(GL_POINTS, 0, vertexListSize);	// 점 그리기
 
 	glBindVertexArray(VAO[1]);
 	glLineWidth(3.0);
@@ -175,7 +176,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 	{
 	case GLUT_LEFT_BUTTON:
 		if (state == GLUT_DOWN && totalShapes < 10) {
-			vertex pos;
+			Vertex pos;
 			mPosToGL(winWidth, winHeight, mx, my, pos.x, pos.y);
 			switch (currentShape)
 			{
@@ -184,8 +185,9 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				break;
 			case 0: // 점
 			{
-				std::array<vertex, 2> pointData = { pos, randColor()};
-				vertexList.push_back(pointData);
+				vertexList[vertexListSize * 2] = pos;
+				vertexList[vertexListSize * 2 + 1] = randColor();
+				vertexListSize++;
 				totalShapes++;
 				updateVBO(0);
 			}
@@ -195,12 +197,12 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				pos.x -= 0.05f;
 				pos.y += 0.05f;
 
-				vertex pos2 = { pos.x + 0.1f, pos.y - 0.1f, 0.0f };
+				Vertex pos2 = { pos.x + 0.1f, pos.y - 0.1f, 0.0f };
 
-				std::array<vertex, 2> point1Data = { pos, randColor() };
-				std::array<vertex, 2> point2Data = { pos2, randColor() };
+				std::array<Vertex, 2> point1Data = { pos, randColor() };
+				std::array<Vertex, 2> point2Data = { pos2, randColor() };
 
-				std::array<std::array<vertex, 2>, 2> lineData =	{ point1Data , point2Data };
+				std::array<std::array<Vertex, 2>, 2> lineData =	{ point1Data , point2Data };
 				lineList.push_back(lineData);
 				totalShapes++;
 				updateVBO(1);
@@ -210,14 +212,14 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			{
 				pos.y += 0.05f;
 
-				vertex pos2 = { pos.x - 0.05f, pos.y - 0.1f, 0.0f };
-				vertex pos3 = { pos.x + 0.05f, pos.y - 0.1f, 0.0f };
+				Vertex pos2 = { pos.x - 0.05f, pos.y - 0.1f, 0.0f };
+				Vertex pos3 = { pos.x + 0.05f, pos.y - 0.1f, 0.0f };
 
-				std::array<vertex, 2> point1Data = { pos, randColor() };
-				std::array<vertex, 2> point2Data = { pos2, randColor() };
-				std::array<vertex, 2> point3Data = { pos3, randColor() };
+				std::array<Vertex, 2> point1Data = { pos, randColor() };
+				std::array<Vertex, 2> point2Data = { pos2, randColor() };
+				std::array<Vertex, 2> point3Data = { pos3, randColor() };
 
-				std::array<std::array<vertex, 2>, 3> triangleData = { point1Data , point2Data, point3Data };
+				std::array<std::array<Vertex, 2>, 3> triangleData = { point1Data , point2Data, point3Data };
 				triangleList.push_back(triangleData);
 				totalShapes++;
 				updateVBO(2);
@@ -228,16 +230,16 @@ GLvoid Mouse(int button, int state, int mx, int my)
 				pos.x += 0.05f;
 				pos.y += 0.05f;
 
-				vertex pos2 = { pos.x - 0.1f, pos.y, 0.0f };
-				vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
-				vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
+				Vertex pos2 = { pos.x - 0.1f, pos.y, 0.0f };
+				Vertex pos3 = { pos.x - 0.1f, pos.y - 0.1f, 0.0f };
+				Vertex pos4 = { pos.x, pos.y - 0.1f, 0.0f };
 
-				std::array<vertex, 2> point1Data = { pos, randColor() };
-				std::array<vertex, 2> point2Data = { pos2, randColor() };
-				std::array<vertex, 2> point3Data = { pos3, randColor() };
-				std::array<vertex, 2> point4Data = { pos4, randColor() };
+				std::array<Vertex, 2> point1Data = { pos, randColor() };
+				std::array<Vertex, 2> point2Data = { pos2, randColor() };
+				std::array<Vertex, 2> point3Data = { pos3, randColor() };
+				std::array<Vertex, 2> point4Data = { pos4, randColor() };
 
-				std::array<std::array<vertex, 2>, 4> rectData = { point1Data , point2Data, point3Data, point4Data };
+				std::array<std::array<Vertex, 2>, 4> rectData = { point1Data , point2Data, point3Data, point4Data };
 				rectList.push_back(rectData);
 				totalShapes++;
 				updateVBO(3);
