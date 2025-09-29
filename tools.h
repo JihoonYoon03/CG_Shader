@@ -12,6 +12,11 @@ struct Vertex {
 	GLfloat x = 0.0, y = 0.0, z = 0.0;
 };
 
+struct ColoredVertex {
+	GLfloat x = 0.0, y = 0.0, z = 0.0;
+	GLfloat r = 0.0, g = 0.0, b = 0.0;
+};
+
 Vertex randColor();
 rtPos randSquarePos(GLfloat offset);
 rtPos randRectPos(GLfloat offset);

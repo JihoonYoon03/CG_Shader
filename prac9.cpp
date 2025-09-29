@@ -14,7 +14,7 @@ GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int mx, int my);
-void makeTriangle(std::vector<Vertex>& triangle, GLfloat x, GLfloat y);
+void makeTriangle(int index, GLfloat x, GLfloat y);
 
 //--- 필요한 변수 선언
 GLint winWidth = 800, winHeight = 600;
@@ -22,25 +22,50 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
+GLuint lineVAO, lineVBO;
 GLuint VAO[4], VBO[4]; // VAO[도형 타입], VBO[정점, 색상]
-std::vector<Vertex> triangles[4];	// 사분면 별 삼각형
-int totalShapes = 0, selectedQuadrant = 0, selectedIndex = 0;	// 도형 개수
+
+Vertex linePos[8] = {
+	{-1.0f, 0.0f, 0.0f },
+	{ 1.0f, 1.0f, 1.0f },
+	{ 1.0f, 0.0f, 0.0f },
+	{ 1.0f, 1.0f, 1.0f },
+	{ 0.0f, -1.0f, 0.0f},
+	{ 1.0f, 1.0f, 1.0f },
+	{ 0.0f, 1.0f, 0.0f },
+	{ 1.0f, 1.0f, 1.0f }
+};
+
+std::vector<ColoredVertex> triangles[4];	// 사분면 별 삼각형
 
 void updateVABO(int targetVBO) {
 	glBindVertexArray(VAO[targetVBO]); // i번째 VAO를 바인드하기
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[targetVBO]);
 
-	glBufferData(GL_ARRAY_BUFFER, triangles[targetVBO].size() * sizeof(Vertex), triangles->data(), GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, triangles[targetVBO].size() * sizeof(ColoredVertex), triangles[targetVBO].data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Vertex), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Vertex), (void*)(3 * sizeof(Vertex)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
 }
 
-void InitBuffer(GLuint VAO[], GLuint VBO[])
+void InitBuffer()
 {
+	glGenVertexArrays(1, &lineVAO);
+	glGenBuffers(1, &lineVBO);
+
+	glBindVertexArray(lineVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(linePos), linePos, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vertex), (void*)(sizeof(Vertex)));
+	glEnableVertexAttribArray(1);
 
 	for (int i = 0; i < 4; i++) {
 		glGenVertexArrays(1, &VAO[i]); // i번째 VAO 를 지정하고 할당하기
@@ -70,7 +95,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	make_fragmentShaders(fragmentShader); //--- 프래그먼트 세이더 만들기
 	shaderProgramID = make_shaderProgram(vertexShader, fragmentShader);
 
-	InitBuffer(VAO, VBO);
+	InitBuffer();
 
 	//--- 세이더 프로그램 만들기
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
@@ -83,16 +108,21 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 //--- 출력 콜백 함수
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	Vertex bgColor = { 1.0f, 1.0f, 1.0f };
+	Vertex bgColor = { 0.1f, 0.1f, 0.1f };
 
 	glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
-	/*for (auto& vao : VAO) {
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-	}*/
+	glBindVertexArray(lineVAO);
+	glDrawArrays(GL_LINES, 0, 4);
+
+	for (int i = 0; i < 4; i++) {
+		if (!triangles[i].empty()) {
+			glBindVertexArray(VAO[i]);
+			glDrawArrays(GL_TRIANGLES, 0, triangles[i].size());
+		}
+	}
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -108,11 +138,15 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	switch (key) {
 	case 'a':
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glutPostRedisplay();
 		break;
 	case 'b':
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glutPostRedisplay();
 		break;
 	case 'c':
+		for (auto& tri : triangles) tri.clear();
+		glutPostRedisplay();
 		break;
 	case 'q':
 		glutLeaveMainLoop();
@@ -134,14 +168,14 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					// 랜덤 중심점 좌표
 					randX = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;	// 0.2 ~ 0.8, 최대 폭은 0.4임
 					randY = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;	// 0.2 ~ 0.8, 최대 높이는 0.4임
-					makeTriangle(triangles[0], randX, randY);
+					makeTriangle(0, randX, randY);
 				}
 				else {				// 4사분면
 					triangles[3].clear();
 
 					randX = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;
 					randY = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;	// -0.2 ~ -0.8
-					makeTriangle(triangles[0], randX, randY);
+					makeTriangle(3, randX, randY);
 				}
 			}
 			else {
@@ -150,16 +184,17 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 					randX = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;	// -0.2 ~ -0.8
 					randY = rand() / static_cast<float>(RAND_MAX) * 0.6f + 0.2f;
-					makeTriangle(triangles[1], randX, randY);
+					makeTriangle(1, randX, randY);
 				}
 				else {				// 3사분면
 					triangles[2].clear();
 
 					randX = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;
 					randY = rand() / static_cast<float>(RAND_MAX) * -0.6f - 0.2f;
-					makeTriangle(triangles[2], randX, randY);
+					makeTriangle(2, randX, randY);
 				}
 			}
+			glutPostRedisplay();
 		}
 		break;
 	case GLUT_RIGHT_BUTTON:
@@ -168,44 +203,50 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 			if (xGL > 0.0f) {
 				if (yGL > 0.0f) {	// 1사분면
-					if (triangles[0].size() < 4) {
+					if (triangles[0].size() < 12) {
 						if (xGL < 0.2f) xGL = 0.2f;
 						if (yGL < 0.2f) yGL = 0.2f;
-						makeTriangle(triangles[0], xGL, yGL);
+						makeTriangle(0, xGL, yGL);
 					}
 				}
 				else {				// 4사분면
-					if (triangles[3].size() < 4) {
+					if (triangles[3].size() < 12) {
 						if (xGL < 0.2f) xGL = 0.2f;
 						if (yGL > -0.2f) yGL = -0.2f;
-						makeTriangle(triangles[3], xGL, yGL);
+						makeTriangle(3, xGL, yGL);
 					}
 				}
 			}
 			else {
 				if (yGL > 0.0f) {	// 2사분면
-					if (triangles[1].size() < 4) {
+					if (triangles[1].size() < 12) {
 						if (xGL > -0.2f) xGL = -0.2f;
 						if (yGL < 0.2f) yGL = 0.2f;
-						makeTriangle(triangles[1], xGL, yGL);
+						makeTriangle(1, xGL, yGL);
 					}
 				}
 				else {				// 3사분면
-					if (triangles[2].size() < 4) {
+					if (triangles[2].size() < 12) {
 						if (xGL > -0.2f) xGL = -0.2f;
 						if (yGL > -0.2f) yGL = -0.2f;
-						makeTriangle(triangles[2], xGL, yGL);
+						makeTriangle(2, xGL, yGL);
 					}
 				}
 			}
+			glutPostRedisplay();
 		}
 		break;
 	}
 }
 
-void makeTriangle(std::vector<Vertex>& triangle, GLfloat x, GLfloat y) {
-	GLfloat offset = rand() / static_cast<float>(RAND_MAX) * 0.2f;
-	Vertex newTriangle[4] = {
+void makeTriangle(int index, GLfloat x, GLfloat y) {
 
-	};
+	GLfloat offset = rand() / static_cast<float>(RAND_MAX) * 0.2f;
+	Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
+
+	triangles[index].push_back({ x, y + offset, 0.0f, color.x, color.y, color.z});
+	triangles[index].push_back({ x - offset, y - offset, 0.0f, color.x, color.y, color.z });
+	triangles[index].push_back({ x + offset, y - offset, 0.0f, color.x, color.y, color.z });
+
+	updateVABO(index);
 }
