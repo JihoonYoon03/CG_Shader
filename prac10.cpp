@@ -55,35 +55,49 @@ public:
 };
 
 class Renderer {
-	std::vector<Triangle> triangles;
+	std::vector<ColoredVertex> triangleData;
 
+	GLuint VAO = 0, VBO = 0;
+
+public:
+	void refreshVABO() {
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+		glBufferData(GL_ARRAY_BUFFER, triangleData.size() * sizeof(ColoredVertex), triangleData.data(), GL_STATIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(3 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+	}
+
+	void begin() {
+		glGenVertexArrays(1, &VAO);
+		glGenBuffers(1, &VBO);
+		refreshVABO();
+	}
+
+	void addTriangleData(std::vector<Triangle>& target) {
+		for (auto& tri : target) {
+			for (int i = 0; i < 3; i++) {
+				triangleData.push_back(tri.vertex[i]);
+			}
+		}
+		refreshVABO();
+	}
+
+	void draw() {
+		if (!triangleData.empty()) {
+			glBindVertexArray(VAO);
+			glDrawArrays(GL_TRIANGLES, 0, triangleData.size());
+		}
+	}
 };
 
-GLuint VAO, VBO;
-
-std::vector<ColoredVertex> triangles;	// 사분면 별 삼각형
-
-void updateVABO() {
-	glBindVertexArray(VAO); // i번째 VAO를 바인드하기
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	glBufferData(GL_ARRAY_BUFFER, triangles.size() * sizeof(ColoredVertex), triangles.data(), GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
-}
-
-void InitBuffer()
-{
-	glGenVertexArrays(1, &VAO); // i번째 VAO 를 지정하고 할당하기
-	glGenBuffers(1, &VBO); // 2개의 i번째 VBO를 지정하고 할당하기
-
-	updateVABO(); // i번째 VBO 업데이트하기
-	glBindVertexArray(0); // VAO 바인드 해제하기
-}
+std::vector<Triangle> triangles;
+Renderer renderer;
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -99,12 +113,13 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glewExperimental = GL_TRUE;
 	glewInit();
 
+	//--- 렌더러 초기화
+	renderer.begin();
+
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
 	make_vertexShaders(vertexShader); //--- 버텍스 세이더 만들기
 	make_fragmentShaders(fragmentShader); //--- 프래그먼트 세이더 만들기
 	shaderProgramID = make_shaderProgram(vertexShader, fragmentShader);
-
-	InitBuffer();
 
 	//--- 세이더 프로그램 만들기
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
@@ -124,10 +139,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
-	if (!triangles.empty()) {
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, triangles.size());
-	}
+	renderer.draw();
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -163,7 +175,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 {
 	switch (button) {
 	case GLUT_LEFT_BUTTON:
-		if (state == GLUT_DOWN && triangles.size() / 3 < 10) {
+		if (state == GLUT_DOWN && triangles.size() < 10) {
 			GLfloat xGL, yGL;
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 
@@ -180,15 +192,10 @@ GLvoid Mouse(int button, int state, int mx, int my)
 }
 
 void makeTriangle(GLfloat x, GLfloat y) {
+	Vertex center = { x , y, 0.0f };
 
-	GLfloat offset = (rand() / static_cast<float>(RAND_MAX) + 0.1f) * 0.2f;
-	Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
-
-	triangles.push_back({ x, y + offset, 0.0f, color.x, color.y, color.z });
-	triangles.push_back({ x - offset / 2, y - offset, 0.0f, color.x, color.y, color.z });
-	triangles.push_back({ x + offset / 2, y - offset, 0.0f, color.x, color.y, color.z });
-
-	updateVABO();
+	triangles.push_back(Vertex(center));
+	renderer.addTriangleData(triangles);
 }
 
 GLvoid Timer(int value) {
