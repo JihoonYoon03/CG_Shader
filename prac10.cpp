@@ -26,15 +26,28 @@ GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 class Renderer;
 
 class Triangle {
+public:
+	enum Direction { STOP, BOUNCE, ZIGZAG, SPIRAL_RT, SPIRAL };
+
+private:
 	friend class Renderer;
 	ColoredVertex vertex[3];
-
 	Vertex center;
-	enum Direction { STOP, BOUNCE, ZIGZAG, SPIRAL_RT, SPIRAL } direction = STOP;
+
 	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f;
+	GLfloat offset = 0.2f;
+	Direction direction = STOP;
+
 public:
+	void relocate(GLfloat x, GLfloat y) { // x, y만큼 이동
+		center.x += x; center.y += y;
+		for (int i = 0; i < 3; i++) {
+			vertex[i].x += x;
+			vertex[i].y += y;
+		}
+	}
+
 	Triangle(Vertex center) : center(center) {
-		GLfloat offset = 0.2f;
 		Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
 		vertex[0] = { center.x, center.y + offset, 0.0f, color.x, color.y, color.z };
 		vertex[1] = { center.x - offset, center.y - offset, 0.0f, color.x, color.y, color.z };
@@ -47,36 +60,49 @@ public:
 		if (vertex[0].y > 1.0f) allignY = 1.0f - vertex[0].y;
 		else if (vertex[1].y < -1.0f) allignY = -1.0f - vertex[1].y;
 
-		center.x += allignX; center.y += allignY;
-		for (int i = 0; i < 3; i++) {
-			vertex[i].x += allignX;
-			vertex[i].y += allignY;
+		relocate(allignX, allignY);
+	}
+
+	void switchMove(Direction dirInput) {
+		relocate(dx, dy);
+		switch (dirInput) {
+		case STOP:
+			dx = 0;	dy = 0;
+			direction = STOP;
+			break;
+		case BOUNCE:
+			dx = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
+			dy = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
+			direction = BOUNCE;
+			break;
 		}
 	}
 
+
 	void updatePos() {
+		relocate(dx * speed, dy * speed);
+		center.x += dx * speed; center.y += dy * speed;
+
+		// 벽 충돌 체킹
 		switch (direction) {
 		case STOP:
 			break;
 		case BOUNCE:
-			moveBounce();
+			if (vertex[0].y > 1.0f || vertex[1].y < -1.0f)
+				dy = -dy; 
+			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f)
+				dx = -dx;
 			break;
 		case ZIGZAG:
-			moveZigzag();
 			break;
 		case SPIRAL_RT:
-			moveSpiralRect();
 			break;
 		case SPIRAL:
-			moveSpiral();
 			break;
 		}
 	}
 
-	void moveBounce() {}
-	void moveZigzag() {}
-	void moveSpiralRect() {}
-	void moveSpiral() {}
+	Direction state() { return direction; }
 };
 
 class Renderer {
@@ -105,6 +131,7 @@ public:
 	}
 
 	void addTriangleData(std::vector<Triangle>& target) {
+		triangleData.clear();
 		for (auto& tri : target) {
 			for (int i = 0; i < 3; i++) {
 				triangleData.push_back(tri.vertex[i]);
@@ -178,7 +205,15 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
+	case '0':
+		for (auto& tri : triangles) {
+			if (tri.state() != Triangle::STOP) tri.switchMove(Triangle::STOP);
+		}
+		break;
 	case '1':
+		for (auto& tri : triangles) {
+			if (tri.state() != Triangle::BOUNCE) tri.switchMove(Triangle::BOUNCE);
+		}
 		break;
 	case '2':
 		break;
@@ -224,6 +259,10 @@ void makeTriangle(GLfloat x, GLfloat y) {
 }
 
 GLvoid Timer(int value) {
+	for (auto& tri : triangles) {
+		tri.updatePos();
+	}
+	renderer.addTriangleData(triangles);
 	glutPostRedisplay();
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
