@@ -34,19 +34,12 @@ private:
 	ColoredVertex vertex[3];
 	Vertex center;
 
-	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f;
+	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 0.0f, radius = 0.0f, clockwise = 0.0f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
+	bool radIncrease = true;
 
 public:
-	void relocate(GLfloat x, GLfloat y) { // x, y만큼 이동
-		center.x += x; center.y += y;
-		for (int i = 0; i < 3; i++) {
-			vertex[i].x += x;
-			vertex[i].y += y;
-		}
-	}
-
 	Triangle(Vertex center) : center(center) {
 		Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
 		vertex[0] = { center.x, center.y + offset, 0.0f, color.x, color.y, color.z };
@@ -66,6 +59,10 @@ public:
 	void switchMove(Direction dirInput) {
 		relocate(dx * speed, direction == ZIGZAG ? 0 : dy * speed);
 		if (direction == ZIGZAG) rotate(dx * 90);
+		else if (direction == SPIRAL) {
+			rotate(-degree);
+			degree = 0;
+		}
 		switch (dirInput) {
 		case STOP:
 			dx = 0;	dy = 0;
@@ -87,18 +84,11 @@ public:
 			direction = SPIRAL_RT;
 			break;
 		case SPIRAL:
+			center.x = 0; center.y = 0;
+			clockwise = rand() % 2 == 0 ? -1.0f : 1.0f;
+			setPosToCenter();
 			direction = SPIRAL;
 			break;
-		}
-	}
-
-	void rotate(GLfloat degree) {
-		GLfloat rad = degree * 3.141592f / 180.0f;
-		for (int i = 0; i < 3; i++) {
-			GLfloat x = vertex[i].x - center.x;
-			GLfloat y = vertex[i].y - center.y;
-			vertex[i].x = x * cos(rad) - y * sin(rad) + center.x;
-			vertex[i].y = x * sin(rad) + y * cos(rad) + center.y;
 		}
 	}
 
@@ -133,7 +123,45 @@ public:
 		case SPIRAL_RT:
 			break;
 		case SPIRAL:
+			if (radius < 1.0f && radIncrease)
+				radius += 0.001f;
+			else if (radius > -1.0f && !radIncrease)
+				radius -= 0.001f;
+
+			rotate(clockwise);
+			degree += clockwise;
+			/*GLfloat rx = radius * cos(degree * 3.141592f / 180.0f);
+			GLfloat ry = radius * sin(degree * 3.141592f / 180.0f);
+
+			relocate(radius * clockwise, radius);*/
 			break;
+		}
+	}
+
+	void relocate(GLfloat x, GLfloat y) { // x, y만큼 이동
+		center.x += x; center.y += y;
+		for (int i = 0; i < 3; i++) {
+			vertex[i].x += x;
+			vertex[i].y += y;
+		}
+	}
+
+	void setPosToCenter() {
+		vertex[0].x = center.x;
+		vertex[0].y = center.y + offset;
+		vertex[1].x = center.x - offset;
+		vertex[1].y = center.y - offset;
+		vertex[2].x = center.x + offset;
+		vertex[2].y = center.y - offset;
+	}
+
+	void rotate(GLfloat degree) {
+		GLfloat rad = degree * 3.141592f / 180.0f;
+		for (int i = 0; i < 3; i++) {
+			GLfloat x = vertex[i].x - center.x;
+			GLfloat y = vertex[i].y - center.y;
+			vertex[i].x = x * cos(rad) - y * sin(rad) + center.x;
+			vertex[i].y = x * sin(rad) + y * cos(rad) + center.y;
 		}
 	}
 
@@ -258,6 +286,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case '3':
 		break;
 	case '4':
+		for (auto& tri : triangles) {
+			if (tri.state() != Triangle::SPIRAL) tri.switchMove(Triangle::SPIRAL);
+		}
 		break;
 	case 'c':
 		triangles.clear();
