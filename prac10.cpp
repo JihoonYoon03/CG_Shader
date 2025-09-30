@@ -34,7 +34,7 @@ private:
 	ColoredVertex vertex[3];
 	Vertex center;
 
-	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 0.0f, radius = 0.0f, clockwise = 0.0f;
+	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 90.0f, radius = 0.0f, clockwise = 0.0f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
 	bool radIncrease = true;
@@ -62,6 +62,9 @@ public:
 		else if (direction == SPIRAL) {
 			rotate(-degree);
 			degree = 0;
+			radius = 0;
+			clockwise = 0;
+			radIncrease = true;
 		}
 		switch (dirInput) {
 		case STOP:
@@ -85,7 +88,7 @@ public:
 			break;
 		case SPIRAL:
 			center.x = 0; center.y = 0;
-			clockwise = rand() % 2 == 0 ? -1.0f : 1.0f;
+			clockwise = rand() % 2 == 0 ? -2.0f : 2.0f;
 			setPosToCenter();
 			direction = SPIRAL;
 			break;
@@ -125,15 +128,24 @@ public:
 		case SPIRAL:
 			if (radius < 1.0f && radIncrease)
 				radius += 0.001f;
-			else if (radius > -1.0f && !radIncrease)
-				radius -= 0.001f;
+			else if (radIncrease)
+				radIncrease = false;
 
+			if (radius > -1.0f && !radIncrease)
+				radius -= 0.001f;
+			else if (!radIncrease)
+				radIncrease = true;
+			
+			// 먼저 회전한 뒤
 			rotate(clockwise);
 			degree += clockwise;
-			/*GLfloat rx = radius * cos(degree * 3.141592f / 180.0f);
+
+			// 회전한만큼 radius에 회전 계산 후 결과만큼 이동
+			GLfloat rx = radius * cos(degree * 3.141592f / 180.0f);
 			GLfloat ry = radius * sin(degree * 3.141592f / 180.0f);
 
-			relocate(radius * clockwise, radius);*/
+			// relocate에서 center 기준으로 정점 좌표 결정됨. center를 0으로 만들어야 radius값 만큼 이동 가능
+			relocate(rx - center.x, ry - center.y);
 			break;
 		}
 	}
@@ -158,8 +170,11 @@ public:
 	void rotate(GLfloat degree) {
 		GLfloat rad = degree * 3.141592f / 180.0f;
 		for (int i = 0; i < 3; i++) {
+			// center 기준 떨어진 거리
 			GLfloat x = vertex[i].x - center.x;
 			GLfloat y = vertex[i].y - center.y;
+
+			// 떨어진 거리만큼 회전시키고 센터에 더하기
 			vertex[i].x = x * cos(rad) - y * sin(rad) + center.x;
 			vertex[i].y = x * sin(rad) + y * cos(rad) + center.y;
 		}
