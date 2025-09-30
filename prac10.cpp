@@ -30,7 +30,7 @@ class Triangle {
 	ColoredVertex vertex[3];
 
 	Vertex center;
-	enum Direction { STOP, BOUNCE, ZIGZAG, SPIRALRT, SPIRALCIRC } direction = STOP;
+	enum Direction { STOP, BOUNCE, ZIGZAG, SPIRAL_RT, SPIRAL } direction = STOP;
 	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f;
 public:
 	Triangle(Vertex center) : center(center) {
@@ -54,12 +54,29 @@ public:
 		}
 	}
 
-	void move() {
-		for (int i = 0; i < 3; i++) {
-			vertex[i].x += dx * speed;
-			vertex[i].y += dy * speed;
+	void updatePos() {
+		switch (direction) {
+		case STOP:
+			break;
+		case BOUNCE:
+			moveBounce();
+			break;
+		case ZIGZAG:
+			moveZigzag();
+			break;
+		case SPIRAL_RT:
+			moveSpiralRect();
+			break;
+		case SPIRAL:
+			moveSpiral();
+			break;
 		}
 	}
+
+	void moveBounce() {}
+	void moveZigzag() {}
+	void moveSpiralRect() {}
+	void moveSpiral() {}
 };
 
 class Renderer {
