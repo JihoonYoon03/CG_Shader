@@ -30,7 +30,8 @@ class Triangle {
 	ColoredVertex vertex[3];
 
 	Vertex center;
-	GLfloat dx = 0.0f, dy = 0.0f;
+	enum Direction { STOP, BOUNCE, ZIGZAG, SPIRALRT, SPIRALCIRC } direction = STOP;
+	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f;
 public:
 	Triangle(Vertex center) : center(center) {
 		GLfloat offset = 0.2f;
@@ -50,6 +51,13 @@ public:
 		for (int i = 0; i < 3; i++) {
 			vertex[i].x += allignX;
 			vertex[i].y += allignY;
+		}
+	}
+
+	void move() {
+		for (int i = 0; i < 3; i++) {
+			vertex[i].x += dx * speed;
+			vertex[i].y += dy * speed;
 		}
 	}
 };
