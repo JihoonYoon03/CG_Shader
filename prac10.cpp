@@ -35,7 +35,7 @@ private:
 	Vertex center;
 
 	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f;
-	GLfloat offset = 0.2f;
+	GLfloat offset = 0.1f;
 	Direction direction = STOP;
 
 public:
@@ -65,6 +65,7 @@ public:
 
 	void switchMove(Direction dirInput) {
 		relocate(dx * speed, direction == ZIGZAG ? 0 : dy * speed);
+		if (direction == ZIGZAG) rotate(dx * 90);
 		switch (dirInput) {
 		case STOP:
 			dx = 0;	dy = 0;
@@ -77,9 +78,9 @@ public:
 			break;
 		case ZIGZAG:
 			// 지그재그 시 회전해서 삼각형 방향 표시 필요
-			rotate();
-			dx = rand() % 1 == 0 ? -1.0f : 1.0f;
+			dx = rand() % 2 == 0 ? -1.0f : 1.0f;
 			dy = center.y < 0 ? 1.0f : -1.0f;
+			rotate(-dx * 90);
 			direction = ZIGZAG;
 			break;
 		case SPIRAL_RT:
@@ -91,7 +92,15 @@ public:
 		}
 	}
 
-	void rotate() {}
+	void rotate(GLfloat degree) {
+		GLfloat rad = degree * 3.141592f / 180.0f;
+		for (int i = 0; i < 3; i++) {
+			GLfloat x = vertex[i].x - center.x;
+			GLfloat y = vertex[i].y - center.y;
+			vertex[i].x = x * cos(rad) - y * sin(rad) + center.x;
+			vertex[i].y = x * sin(rad) + y * cos(rad) + center.y;
+		}
+	}
 
 	void updatePos() {
 
@@ -109,13 +118,15 @@ public:
 			break;
 		case ZIGZAG:
 			relocate(dx * speed, 0);
-			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f) {
+			if (vertex[0].x < -1.0f || vertex[0].x > 1.0f) {
 				dx = -dx;
-				relocate(0, (vertex[0].y - vertex[1].y) * dy);
-				if (vertex[0].y > 1.0f || vertex[1].y < -1.0f) {
+				relocate(0, abs(vertex[1].y - vertex[2].y) * dy);
+				if (vertex[1].y > 1.0f || vertex[2].y > 1.0f ||
+					vertex[1].y < -1.0f || vertex[2].y < -1.0f) {
 					dy = -dy;
-					relocate(0, (vertex[0].y - vertex[1].y) * dy);
+					relocate(0, abs(vertex[1].y - vertex[2].y) * dy);
 				}
+				rotate(180);
 			}
 
 			break;
