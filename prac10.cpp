@@ -23,10 +23,39 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
+class Renderer;
+
 class Triangle {
+	friend class Renderer;
 	ColoredVertex vertex[3];
 
+	Vertex center;
+	GLfloat dx = 0.0f, dy = 0.0f;
 public:
+	Triangle(Vertex center) : center(center) {
+		GLfloat offset = 0.2f;
+		Vertex color = { rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX), rand() / static_cast<float>(RAND_MAX) };
+		vertex[0] = { center.x, center.y + offset, 0.0f, color.x, color.y, color.z };
+		vertex[1] = { center.x - offset, center.y - offset, 0.0f, color.x, color.y, color.z };
+		vertex[2] = { center.x + offset, center.y - offset, 0.0f, color.x, color.y, color.z };
+
+		GLfloat allignX = 0, allignY = 0;
+		if (vertex[1].x < -1.0f) allignX = -1.0f - vertex[1].x;
+		else if (vertex[2].x > 1.0f) allignX = 1.0f - vertex[2].x;
+
+		if (vertex[0].y > 1.0f) allignY = 1.0f - vertex[0].y;
+		else if (vertex[1].y < -1.0f) allignY = -1.0f - vertex[1].y;
+
+		center.x += allignX; center.y += allignY;
+		for (int i = 0; i < 3; i++) {
+			vertex[i].x += allignX;
+			vertex[i].y += allignY;
+		}
+	}
+};
+
+class Renderer {
+	std::vector<Triangle> triangles;
 
 };
 

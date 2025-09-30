@@ -203,41 +203,38 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 			if (xGL > 0.0f) {
 				if (yGL > 0.0f) {	// 1사분면
+					if (triangles[0].size() >= 12) {
+						for (int i = 0; i < 3; i++) triangles[0].erase(triangles[0].begin());
+					}
 					if (xGL < 0.2f) xGL = 0.2f;
 					if (yGL < 0.2f) yGL = 0.2f;
 					makeTriangle(0, xGL, yGL);
-					if (triangles[0].size() > 12) {
-						for (int i = 0; i < 3; i++) triangles[0].erase(triangles[0].begin());
-					}
 				}
 				else {				// 4사분면
-
+					if (triangles[3].size() >= 12) {
+						for (int i = 0; i < 3; i++) triangles[3].erase(triangles[3].begin());
+					}
 					if (xGL < 0.2f) xGL = 0.2f;
 					if (yGL > -0.2f) yGL = -0.2f;
 					makeTriangle(3, xGL, yGL);
-					if (triangles[3].size() > 12) {
-						for (int i = 0; i < 3; i++) triangles[3].erase(triangles[3].begin());
-					}
 				}
 			}
 			else {
 				if (yGL > 0.0f) {	// 2사분면
-
+					if (triangles[1].size() >= 12) {
+						for (int i = 0; i < 3; i++) triangles[1].erase(triangles[1].begin());
+					}
 					if (xGL > -0.2f) xGL = -0.2f;
 					if (yGL < 0.2f) yGL = 0.2f;
 					makeTriangle(1, xGL, yGL);
-					if (triangles[1].size() > 12) {
-						for (int i = 0; i < 3; i++) triangles[1].erase(triangles[1].begin());
-					}
 				}
 				else {				// 3사분면
-
+					if (triangles[2].size() >= 12) {
+						for (int i = 0; i < 3; i++) triangles[2].erase(triangles[2].begin());
+					}
 					if (xGL > -0.2f) xGL = -0.2f;
 					if (yGL > -0.2f) yGL = -0.2f;
 					makeTriangle(2, xGL, yGL);
-					if (triangles[2].size() > 12) {
-						for (int i = 0; i < 3; i++) triangles[2].erase(triangles[2].begin());
-					}
 				}
 			}
 			glutPostRedisplay();
