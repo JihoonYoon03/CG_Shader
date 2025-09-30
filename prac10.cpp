@@ -64,7 +64,7 @@ public:
 	}
 
 	void switchMove(Direction dirInput) {
-		relocate(dx, dy);
+		relocate(dx * speed, direction == ZIGZAG ? 0 : dy * speed);
 		switch (dirInput) {
 		case STOP:
 			dx = 0;	dy = 0;
@@ -75,25 +75,40 @@ public:
 			dy = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
 			direction = BOUNCE;
 			break;
+		case ZIGZAG:
+			dx = rand() % 1 == 0 ? -1.0f : 1.0f;
+			dy = center.y < 0 ? 1.0f : -1.0f;
+			direction = ZIGZAG;
+			break;
 		}
 	}
 
 
 	void updatePos() {
-		relocate(dx * speed, dy * speed);
-		center.x += dx * speed; center.y += dy * speed;
 
 		// 벽 충돌 체킹
 		switch (direction) {
 		case STOP:
 			break;
 		case BOUNCE:
+			relocate(dx * speed, dy * speed);
 			if (vertex[0].y > 1.0f || vertex[1].y < -1.0f)
 				dy = -dy; 
 			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f)
 				dx = -dx;
+
 			break;
 		case ZIGZAG:
+			relocate(dx * speed, 0);
+			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f) {
+				dx = -dx;
+				relocate(0, (vertex[0].y - vertex[1].y) * dy);
+				if (vertex[0].y > 1.0f || vertex[1].y < -1.0f) {
+					dy = -dy;
+					relocate(0, (vertex[0].y - vertex[1].y) * dy);
+				}
+			}
+
 			break;
 		case SPIRAL_RT:
 			break;
@@ -216,6 +231,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		}
 		break;
 	case '2':
+		for (auto& tri : triangles) {
+			if (tri.state() != Triangle::ZIGZAG) tri.switchMove(Triangle::ZIGZAG);
+		}
 		break;
 	case '3':
 		break;
