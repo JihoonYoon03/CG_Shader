@@ -76,13 +76,22 @@ public:
 			direction = BOUNCE;
 			break;
 		case ZIGZAG:
+			// 지그재그 시 회전해서 삼각형 방향 표시 필요
+			rotate();
 			dx = rand() % 1 == 0 ? -1.0f : 1.0f;
 			dy = center.y < 0 ? 1.0f : -1.0f;
 			direction = ZIGZAG;
 			break;
+		case SPIRAL_RT:
+			direction = SPIRAL_RT;
+			break;
+		case SPIRAL:
+			direction = SPIRAL;
+			break;
 		}
 	}
 
+	void rotate() {}
 
 	void updatePos() {
 
