@@ -34,7 +34,7 @@ private:
 	ColoredVertex vertex[3];
 	Vertex center;
 
-	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 90.0f, radius = 0.0f, clockwise = 0.0f;
+	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.05f, degree = 90.0f, radius = 0.0f, clockwise = 0.0f;
 	GLfloat xCapLeft = 0.1f, xCapRight = 0.1f, yCapTop = 0.1f, yCapBottom = 0.1f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
@@ -104,6 +104,16 @@ public:
 			if (rand() % 2) dx = 0;
 			else dy = 0;
 
+			// 시작지점은 오프셋 1회 미리 적용
+			if (dx) {
+				if (center.y < 0) yCapBottom += offset * 2;
+				else yCapTop += offset * 2;
+			}
+			else {
+				if (center.x < 0) xCapLeft += offset * 2;
+				else xCapRight += offset * 2;
+			}
+
 			direction = SPIRAL_RT;
 		}
 		break;
@@ -150,12 +160,15 @@ public:
 
 			// 충돌 기준점 설정
 			GLfloat wall;
-			if (dx) wall = dx > 0.0f ? 1.0f - offset - xCapRight : -1.0f + offset + xCapLeft;
-			else wall = dy > 0.0f ? 1.0f - offset - yCapTop : -1.0f + offset + yCapBottom;
+			// 우측 or 좌측, 상단 or 하단 결정
+			if (dx)	wall = dx > 0.0f ? 1.0f - xCapRight : -1.0f + xCapLeft;
+			else wall = dy > 0.0f ? 1.0f - yCapTop : -1.0f + yCapBottom;
 
 			// 벽 충돌 체크
 			if (dx) {
-				if (abs(center.x) > abs(wall)) {	// 더 멀리 나가있으면
+				if ((center.x > wall && wall > 0) || (center.x < wall && wall < 0)) {	// 더 멀리 나가있으면
+					GLfloat offsetTemp = squeezeRT ? offset : -offset;
+					offsetTemp *= 2;
 					moveTo(wall, center.y);	// 이전 좌표 복구
 					dx = 0;
 					dy = center.y > 0 ? -1.0f : 1.0f;	// y방향으로 전환
@@ -167,7 +180,7 @@ public:
 
 						if (xCapRight == offset) xCapLeft += 0.001f;
 						else {
-							xCapLeft += squeezeRT ? offset : -offset;
+							xCapLeft += offsetTemp;
 							if (squeezeRT && xCapLeft > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
 								squeezeRT = false;
 								xCapLeft = 1.8f;
@@ -182,7 +195,7 @@ public:
 
 						if (xCapLeft == offset) xCapRight += 0.001f;
 						else {
-							xCapRight += squeezeRT ? offset : -offset;
+							xCapRight += offsetTemp;
 							if (squeezeRT && xCapRight > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
 								squeezeRT = false;
 								xCapRight = 1.8f;
@@ -196,16 +209,18 @@ public:
 				}
 			}
 			else {
-				if (abs(center.y) > abs(wall)) {
+				if ((center.y > wall && wall > 0) || (center.y < wall && wall < 0)) {
+					GLfloat offsetTemp = squeezeRT ? offset : -offset;
+					offsetTemp *= 2;
 					moveTo(center.x, wall);	// 이전 좌표 복구
-					dy = 0;
 					dx = center.x > 0 ? -1.0f : 1.0f;	// x방향으로 전환
+					dy = 0;
 
 					if (wall > 0.0f) {		// 위쪽 벽 체킹이었다면
 
 						if (yCapTop == offset) yCapBottom += 0.001f;
 						else {
-							yCapBottom += squeezeRT ? offset : -offset;
+							yCapBottom += offsetTemp;
 							if (squeezeRT && yCapBottom > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
 								squeezeRT = false;
 								yCapBottom = 1.8f;
@@ -219,7 +234,7 @@ public:
 					else {					// 아래쪽 벽 체킹이었다면
 						if (yCapBottom == offset) yCapTop += 0.001f;
 						else {
-							yCapTop += squeezeRT ? offset : -offset;
+							yCapTop += offsetTemp;
 							if (squeezeRT && yCapTop > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
 								squeezeRT = false;
 								yCapTop = 1.8f;
