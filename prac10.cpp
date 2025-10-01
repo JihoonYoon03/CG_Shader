@@ -60,8 +60,8 @@ public:
 		relocate(dx * speed, direction == ZIGZAG ? 0 : dy * speed);
 		if (direction == ZIGZAG) rotate(dx * 90);
 		else if (direction == SPIRAL) {
-			rotate(-degree);
-			degree = 0;
+			rotate(-degree + 90);
+			degree = 90;
 			radius = 0;
 			clockwise = 0;
 			radIncrease = true;
