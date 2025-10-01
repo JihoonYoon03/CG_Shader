@@ -38,7 +38,7 @@ private:
 	GLfloat xCapLeft = 0.1f, xCapRight = 0.1f, yCapTop = 0.1f, yCapBottom = 0.1f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
-	bool radIncrease = true, squeezeRT = true;
+	bool radIncrease = true, squeezeRT = true, movedown = true;
 
 public:
 	Triangle(Vertex center) : center(center) {
@@ -74,6 +74,7 @@ public:
 		case BOUNCE:
 			dx = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
 			dy = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
+			rotate(atan2(dy, dx) * 180 / 3.141592f - 90);
 			direction = BOUNCE;
 			break;
 		case ZIGZAG:
@@ -106,10 +107,12 @@ public:
 
 			// 시작지점은 오프셋 1회 미리 적용
 			if (dx) {
+				rotate(-dx * 90);
 				if (center.y < 0) yCapBottom += offset * 2;
 				else yCapTop += offset * 2;
 			}
 			else {
+				rotate(dy < 0 ? 180 : 0);
 				if (center.x < 0) xCapLeft += offset * 2;
 				else xCapRight += offset * 2;
 			}
@@ -134,22 +137,34 @@ public:
 			break;
 		case BOUNCE:
 			moveAmount(dx * speed, dy * speed);
-			if (vertex[0].y > 1.0f || vertex[1].y < -1.0f)
+			if (vertex[0].y > 1.0f || vertex[0].y < -1.0f) {
 				dy = -dy;
-			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f)
+				resetRotation();
+				rotate(atan2(dy, dx) * 180 / 3.141592f - 90);
+			}
+			if (vertex[0].x < -1.0f || vertex[0].x > 1.0f) {
 				dx = -dx;
+				resetRotation();
+				rotate(atan2(dy, dx) * 180 / 3.141592f - 90);
+			}
 
 			break;
 		case ZIGZAG:
-			moveAmount(dx * speed, 0);
-			if (vertex[0].x < -1.0f || vertex[0].x > 1.0f) {
-				dx = -dx;
-				moveAmount(0, abs(vertex[1].y - vertex[2].y) * dy);
+			if (dy == 0)
+				moveAmount(dx * speed, 0);
+			else {
 				if (vertex[1].y > 1.0f || vertex[2].y > 1.0f ||
 					vertex[1].y < -1.0f || vertex[2].y < -1.0f) {
+					movedown = !movedown;
 					dy = -dy;
-					moveAmount(0, abs(vertex[1].y - vertex[2].y) * dy);
 				}
+				moveAmount(0, dy * speed);
+				dy -= dy * 0.1f;
+				if (abs(dy) < 0.1f) dy = 0;
+			}
+			if (vertex[0].x < -1.0f || vertex[0].x > 1.0f) {
+				dx = -dx;
+				dy = movedown ? 1.0f : -1.0f;
 				rotate(180);
 			}
 
@@ -167,14 +182,14 @@ public:
 			// 벽 충돌 체크
 			if (dx) {
 				if ((center.x > wall && wall > 0) || (center.x < wall && wall < 0)) {	// 더 멀리 나가있으면
-					if (!squeezeRT) {
-						std::cout << "check" << std::endl;
-					}
+					
 					GLfloat offsetTemp = squeezeRT ? offset : -offset;
 					offsetTemp *= 2;
 					moveTo(wall, center.y);	// 이전 좌표 복구
 					dx = 0;
 					dy = center.y > 0 ? -1.0f : 1.0f;	// y방향으로 전환
+					resetRotation();
+					rotate(dy < 0 ? 180 : 0);
 
 					if (wall > 0.0f) {		// 만약 오른쪽 벽 체킹이었다면
 						
@@ -213,14 +228,14 @@ public:
 			}
 			else {
 				if ((center.y > wall && wall > 0) || (center.y < wall && wall < 0)) {
-					if (!squeezeRT) {
-						std::cout << "check" << std::endl;
-					}
+					
 					GLfloat offsetTemp = squeezeRT ? offset : -offset;
 					offsetTemp *= 2;
 					moveTo(center.x, wall);	// 이전 좌표 복구
 					dx = center.x > 0 ? -1.0f : 1.0f;	// x방향으로 전환
 					dy = 0;
+					resetRotation();
+					rotate(-dx * 90);
 
 					if (wall > 0.0f) {		// 위쪽 벽 체킹이었다면
 
