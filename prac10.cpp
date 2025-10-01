@@ -35,7 +35,7 @@ private:
 	Vertex center;
 
 	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 90.0f, radius = 0.0f, clockwise = 0.0f;
-	GLfloat sp_RT_capX = 0.1f, sp_RT_capY = 0.1f;
+	GLfloat xCapLeft = 0.1f, xCapRight = 0.1f, yCapTop = 0.1f, yCapBottom = 0.1f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
 	bool radIncrease = true, squeezeRT = true;
@@ -88,8 +88,8 @@ public:
 
 			GLfloat randX = rand() % 2 == 0 ? -1.0f : 1.0f;
 			GLfloat randY = rand() % 2 == 0 ? -1.0f : 1.0f;
-			randX = -randX + randX * sp_RT_capX;
-			randY = -randY + randY * sp_RT_capY;
+			randX = -randX + randX * offset;
+			randY = -randY + randY * offset;
 
 			// 랜덤 모서리로 이동
 			moveTo(randX, randY);
@@ -106,7 +106,7 @@ public:
 
 			direction = SPIRAL_RT;
 		}
-			break;
+		break;
 		case SPIRAL:
 			center.x = 0; center.y = 0;
 			clockwise = rand() % 2 == 0 ? -2.0f : 2.0f;
@@ -125,7 +125,7 @@ public:
 		case BOUNCE:
 			moveAmount(dx * speed, dy * speed);
 			if (vertex[0].y > 1.0f || vertex[1].y < -1.0f)
-				dy = -dy; 
+				dy = -dy;
 			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f)
 				dx = -dx;
 
@@ -145,6 +145,94 @@ public:
 
 			break;
 		case SPIRAL_RT:
+		{
+			moveAmount(dx * speed, dy * speed);
+
+			// 충돌 기준점 설정
+			GLfloat wall;
+			if (dx) wall = dx > 0.0f ? 1.0f - offset - xCapRight : -1.0f + offset + xCapLeft;
+			else wall = dy > 0.0f ? 1.0f - offset - yCapTop : -1.0f + offset + yCapBottom;
+
+			// 벽 충돌 체크
+			if (dx) {
+				if (abs(center.x) > abs(wall)) {	// 더 멀리 나가있으면
+					moveTo(wall, center.y);	// 이전 좌표 복구
+					dx = 0;
+					dy = center.y > 0 ? -1.0f : 1.0f;	// y방향으로 전환
+
+					if (wall > 0.0f) {		// 만약 오른쪽 벽 체킹이었다면
+						
+						// 아직 왼쪽 충돌 한계점이 증가하지 않았다면, 표시용으로 조금만 증가시키기
+						// 만약 조건문이 false라면 왼쪽 벽은 초기 이동을 마친 상태이므로, 이후 캡은 오프셋만큼 증가
+
+						if (xCapRight == offset) xCapLeft += 0.001f;
+						else {
+							xCapLeft += squeezeRT ? offset : -offset;
+							if (squeezeRT && xCapLeft > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
+								squeezeRT = false;
+								xCapLeft = 1.8f;
+							}
+							else if (!squeezeRT && xCapLeft < offset) {	// 만약 한계점이 풀린 상태일 때 초기 오프셋 값을 넘었다면, squeeze 다시 걸기
+								squeezeRT = true;
+								xCapLeft = offset;
+							}
+						}
+					}
+					else {					// 왼쪽 벽 체킹이었다면
+
+						if (xCapLeft == offset) xCapRight += 0.001f;
+						else {
+							xCapRight += squeezeRT ? offset : -offset;
+							if (squeezeRT && xCapRight > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
+								squeezeRT = false;
+								xCapRight = 1.8f;
+							}
+							else if (!squeezeRT && xCapRight < offset) {	// 만약 한계점이 풀린 상태일 때 초기 오프셋 값을 넘었다면, squeeze 다시 걸기
+								squeezeRT = true;
+								xCapRight = offset;
+							}
+						}
+					}
+				}
+			}
+			else {
+				if (abs(center.y) > abs(wall)) {
+					moveTo(center.x, wall);	// 이전 좌표 복구
+					dy = 0;
+					dx = center.x > 0 ? -1.0f : 1.0f;	// x방향으로 전환
+
+					if (wall > 0.0f) {		// 위쪽 벽 체킹이었다면
+
+						if (yCapTop == offset) yCapBottom += 0.001f;
+						else {
+							yCapBottom += squeezeRT ? offset : -offset;
+							if (squeezeRT && yCapBottom > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
+								squeezeRT = false;
+								yCapBottom = 1.8f;
+							}
+							else if (!squeezeRT && yCapBottom < offset) {	// 만약 한계점이 풀린 상태일 때 초기 오프셋 값을 넘었다면, squeeze 다시 걸기
+								squeezeRT = true;
+								yCapBottom = offset;
+							}
+						}
+					}
+					else {					// 아래쪽 벽 체킹이었다면
+						if (yCapBottom == offset) yCapTop += 0.001f;
+						else {
+							yCapTop += squeezeRT ? offset : -offset;
+							if (squeezeRT && yCapTop > 1.8f) {	// 만약 한계점이 squeeze 상태일 때 1.8f를 넘었다면, squeeze 풀기
+								squeezeRT = false;
+								yCapTop = 1.8f;
+							}
+							else if (!squeezeRT && yCapTop < offset) {	// 만약 한계점이 풀린 상태일 때 초기 오프셋 값을 넘었다면, squeeze 다시 걸기
+								squeezeRT = true;
+								yCapTop = offset;
+							}
+						}
+					}
+				}
+			}
+		}
 			break;
 		case SPIRAL:
 			if (radius < 1.0f && radIncrease)
@@ -357,9 +445,9 @@ GLvoid Mouse(int button, int state, int mx, int my)
 			GLfloat xGL, yGL;
 			mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 
-			if		(xGL > 0.9f) xGL = 0.9f;
+			if (xGL > 0.9f) xGL = 0.9f;
 			else if (xGL < -0.9f) xGL = -0.9f;
-			if		(yGL > 0.8f) yGL = 0.8f;
+			if (yGL > 0.8f) yGL = 0.8f;
 			else if (yGL < -0.8f) yGL = -0.8f;
 
 			makeTriangle(xGL, yGL);
