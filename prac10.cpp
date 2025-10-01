@@ -35,9 +35,10 @@ private:
 	Vertex center;
 
 	GLfloat dx = 0.0f, dy = 0.0f, speed = 0.01f, degree = 90.0f, radius = 0.0f, clockwise = 0.0f;
+	GLfloat sp_RT_capX = 0.1f, sp_RT_capY = 0.1f;
 	GLfloat offset = 0.1f;
 	Direction direction = STOP;
-	bool radIncrease = true;
+	bool radIncrease = true, squeezeRT = true;
 
 public:
 	Triangle(Vertex center) : center(center) {
@@ -53,14 +54,13 @@ public:
 		if (vertex[0].y > 1.0f) allignY = 1.0f - vertex[0].y;
 		else if (vertex[1].y < -1.0f) allignY = -1.0f - vertex[1].y;
 
-		relocate(allignX, allignY);
+		moveAmount(allignX, allignY);
 	}
 
 	void switchMove(Direction dirInput) {
-		relocate(dx * speed, direction == ZIGZAG ? 0 : dy * speed);
-		if (direction == ZIGZAG) rotate(dx * 90);
-		else if (direction == SPIRAL) {
-			rotate(-degree + 90);
+		dx = 0, dy = 0;
+		resetRotation();
+		if (direction == SPIRAL) {
 			degree = 90;
 			radius = 0;
 			clockwise = 0;
@@ -84,12 +84,33 @@ public:
 			direction = ZIGZAG;
 			break;
 		case SPIRAL_RT:
+		{
+
+			GLfloat randX = rand() % 2 == 0 ? -1.0f : 1.0f;
+			GLfloat randY = rand() % 2 == 0 ? -1.0f : 1.0f;
+			randX = -randX + randX * sp_RT_capX;
+			randY = -randY + randY * sp_RT_capY;
+
+			// 랜덤 모서리로 이동
+			moveTo(randX, randY);
+
+			// 각 모서리에 맞게 dx, dy 이동방향 설정
+			if (randX > 0) dx = -1.0f;
+			else dx = 1.0f;
+			if (randY > 0) dy = -1.0f;
+			else dy = 1.0f;
+
+			// x나 y중 하나 0으로 전환 (이동방향 최종 설정)
+			if (rand() % 2) dx = 0;
+			else dy = 0;
+
 			direction = SPIRAL_RT;
+		}
 			break;
 		case SPIRAL:
 			center.x = 0; center.y = 0;
 			clockwise = rand() % 2 == 0 ? -2.0f : 2.0f;
-			setPosToCenter();
+			resetRotation();
 			direction = SPIRAL;
 			break;
 		}
@@ -102,7 +123,7 @@ public:
 		case STOP:
 			break;
 		case BOUNCE:
-			relocate(dx * speed, dy * speed);
+			moveAmount(dx * speed, dy * speed);
 			if (vertex[0].y > 1.0f || vertex[1].y < -1.0f)
 				dy = -dy; 
 			if (vertex[1].x < -1.0f || vertex[2].x > 1.0f)
@@ -110,14 +131,14 @@ public:
 
 			break;
 		case ZIGZAG:
-			relocate(dx * speed, 0);
+			moveAmount(dx * speed, 0);
 			if (vertex[0].x < -1.0f || vertex[0].x > 1.0f) {
 				dx = -dx;
-				relocate(0, abs(vertex[1].y - vertex[2].y) * dy);
+				moveAmount(0, abs(vertex[1].y - vertex[2].y) * dy);
 				if (vertex[1].y > 1.0f || vertex[2].y > 1.0f ||
 					vertex[1].y < -1.0f || vertex[2].y < -1.0f) {
 					dy = -dy;
-					relocate(0, abs(vertex[1].y - vertex[2].y) * dy);
+					moveAmount(0, abs(vertex[1].y - vertex[2].y) * dy);
 				}
 				rotate(180);
 			}
@@ -135,7 +156,7 @@ public:
 				radius -= 0.001f;
 			else if (!radIncrease)
 				radIncrease = true;
-			
+
 			// 먼저 회전한 뒤
 			rotate(clockwise);
 			degree += clockwise;
@@ -144,13 +165,13 @@ public:
 			GLfloat rx = radius * cos(degree * 3.141592f / 180.0f);
 			GLfloat ry = radius * sin(degree * 3.141592f / 180.0f);
 
-			// relocate에서 center 기준으로 정점 좌표 결정됨. center를 0으로 만들어야 radius값 만큼 이동 가능
-			relocate(rx - center.x, ry - center.y);
+			// 반지름 만큼 이동. 이전에 이동한 값은(center) 빼주고 원점에서 다시 계산
+			moveAmount(rx - center.x, ry - center.y);
 			break;
 		}
 	}
 
-	void relocate(GLfloat x, GLfloat y) { // x, y만큼 이동
+	void moveAmount(GLfloat x, GLfloat y) { // x, y만큼 이동
 		center.x += x; center.y += y;
 		for (int i = 0; i < 3; i++) {
 			vertex[i].x += x;
@@ -158,7 +179,17 @@ public:
 		}
 	}
 
-	void setPosToCenter() {
+	void moveTo(GLfloat x, GLfloat y) {	// x, y로 이동
+		GLfloat xDiff = x - center.x;
+		GLfloat yDiff = y - center.y;
+		center.x = x; center.y = y;
+		for (int i = 0; i < 3; i++) {
+			vertex[i].x += xDiff;
+			vertex[i].y += yDiff;
+		}
+	}
+
+	void resetRotation() {
 		vertex[0].x = center.x;
 		vertex[0].y = center.y + offset;
 		vertex[1].x = center.x - offset;
@@ -299,6 +330,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		}
 		break;
 	case '3':
+		for (auto& tri : triangles) {
+			if (tri.state() != Triangle::SPIRAL_RT) tri.switchMove(Triangle::SPIRAL_RT);
+		}
 		break;
 	case '4':
 		for (auto& tri : triangles) {
