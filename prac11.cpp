@@ -153,7 +153,6 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case '5':
 		// 개수만큼 생성
 	case 'c':
-		triangles.clear();
 		glutPostRedisplay();
 		break;
 	case 'q':
