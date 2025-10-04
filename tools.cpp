@@ -71,12 +71,12 @@ char* filetobuf(const char* file)
 	return buf;						// Return the buffer
 }
 
-void make_vertexShaders(GLuint& vertexShader)
+void make_vertexShaders(GLuint& vertexShader, const std::string& shaderName)
 {
 	GLchar* vertexSource;
 	//--- 버텍스 세이더 읽어 저장하고 컴파일 하기
 	//--- filetobuf: 사용자정의 함수로 텍스트를 읽어서 문자열에 저장하는 함수
-	vertexSource = filetobuf("vertex.glsl");
+	vertexSource = filetobuf(shaderName.data());
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 	glCompileShader(vertexShader);
@@ -91,11 +91,11 @@ void make_vertexShaders(GLuint& vertexShader)
 	}
 }
 
-void make_fragmentShaders(GLuint& fragmentShader)
+void make_fragmentShaders(GLuint& fragmentShader, const std::string& shaderName)
 {
 	GLchar* fragmentSource;
 	//--- 프래그먼트 세이더 읽어 저장하고 컴파일하기
-	fragmentSource = filetobuf("fragment.glsl"); // 프래그세이더 읽어오기
+	fragmentSource = filetobuf(shaderName.data()); // 프래그세이더 읽어오기
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);

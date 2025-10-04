@@ -121,8 +121,8 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glewInit();
 
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
-	make_vertexShaders(vertexShader); //--- 버텍스 세이더 만들기
-	make_fragmentShaders(fragmentShader); //--- 프래그먼트 세이더 만들기
+	make_vertexShaders(vertexShader, "vertex_prac11.glsl"); //--- 버텍스 세이더 만들기
+	make_fragmentShaders(fragmentShader, "fragment_prac11.glsl"); //--- 프래그먼트 세이더 만들기
 	shaderProgramID = make_shaderProgram(vertexShader, fragmentShader);
 
 	//--- 세이더 프로그램 만들기
