@@ -41,6 +41,12 @@
     <None Include="fragment.glsl">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="fragment_prac11.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
+    <None Include="vertex_prac11.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tools.h">

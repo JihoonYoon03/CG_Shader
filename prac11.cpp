@@ -23,6 +23,8 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
+GLfloat angleCap = 900.f, angleIncrease = 2.5f, radiusIncrease = 0.0005f;
+
 class Spiral {
 	Vertex center, end, currentVertex;
 	GLfloat angle = 0.0f, radius = 0.0f;	// 타이머 호출 시 마다 증가, Renderer에서 해당 값으로 위치 계산해 VBO 저장
@@ -34,7 +36,7 @@ public:
 		currentVertex = center;
 		clockwise = (rand() % 2) ? 1 : -1;
 		end = center;
-		end.x += 0.225f * clockwise;
+		end.x += angleCap / angleIncrease * radiusIncrease * clockwise;
 	}
 
 	// 지속적으로 타이머를 통해 호출됨
@@ -46,8 +48,8 @@ public:
 			expand = false;
 		}
 
-		angle += 0.5f * clockwise;
-		radius += 0.0005f * clockwise;
+		angle += angleIncrease * clockwise;
+		radius += radiusIncrease * clockwise;
 
 		// 회전에 따른 현재 정점위치 계산. 이 값은 Renderer의 VBO에 저장
 		currentVertex.x = expand ? center.x : end.x + radius * cos(angle * 3.141592f / 180.0f);
@@ -57,27 +59,31 @@ public:
 
 class Renderer {
 	
+	std::vector<GLuint> spiralVBO;
 
-	GLuint VAO = 0, VBO = 0;
+	GLuint VAO = 0;
 
 public:
-	void refreshVABO() {
+	// Renderer 초기화
+	void begin(int count) {
+		glGenVertexArrays(1, &VAO);
 		glBindVertexArray(VAO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-		// glBufferData(GL_ARRAY_BUFFER, triangleData.size() * sizeof(ColoredVertex), triangleData.data(), GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
 		glEnableVertexAttribArray(0);
 
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(3 * sizeof(GLfloat)));
-		glEnableVertexAttribArray(1);
+		// 스파이럴 개수만큼 VBO 생성 후 데이터공간 할당
+		for (int i = 0; i < count; i++) {
+			spiralVBO.push_back(0);
+			glGenBuffers(1, &spiralVBO.back());
+
+			glBindBuffer(GL_ARRAY_BUFFER, spiralVBO.back());
+			glBufferData(GL_ARRAY_BUFFER, 800 * sizeof(Vertex), NULL, GL_STATIC_DRAW);
+		}
 	}
 
-	void begin() {
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &VBO);
-		refreshVABO();
+	void updateVBO(const Vertex& point) {
+
 	}
 
 	void draw() {
@@ -99,9 +105,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	//--- GLEW 초기화하기
 	glewExperimental = GL_TRUE;
 	glewInit();
-
-	//--- 렌더러 초기화
-	renderer.begin();
 
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
 	make_vertexShaders(vertexShader); //--- 버텍스 세이더 만들기
@@ -151,7 +154,8 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case '3':
 	case '4':
 	case '5':
-		// 개수만큼 생성
+		// 개수만큼 생성, 렌더러 초기화
+		renderer.begin(key - '0');
 	case 'c':
 		glutPostRedisplay();
 		break;
