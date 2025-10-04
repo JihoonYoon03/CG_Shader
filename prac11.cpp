@@ -23,6 +23,38 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
+class Spiral {
+	Vertex center, end, currentVertex;
+	GLfloat angle = 0.0f, radius = 0.0f;	// 타이머 호출 시 마다 증가, Renderer에서 해당 값으로 위치 계산해 VBO 저장
+	int clockwise = 0; // 1: 시계, -1: 반시계
+	bool expand = true;
+
+public:
+	Spiral(Vertex center) : center(center) {
+		currentVertex = center;
+		clockwise = (rand() % 2) ? 1 : -1;
+		end = center;
+		end.x += 0.225f * clockwise;
+	}
+
+	// 지속적으로 타이머를 통해 호출됨
+	void Spin() {
+
+		// 만약 900도 이상 돌았다면, 방향 전환 후 기준점은 end로 잡는다.
+		if (angle >= 900 || angle <= -900) {
+			clockwise = -clockwise;
+			expand = false;
+		}
+
+		angle += 0.5f * clockwise;
+		radius += 0.0005f * clockwise;
+
+		// 회전에 따른 현재 정점위치 계산. 이 값은 Renderer의 VBO에 저장
+		currentVertex.x = expand ? center.x : end.x + radius * cos(angle * 3.141592f / 180.0f);
+		currentVertex.y = expand ? center.y : end.y + radius * sin(angle * 3.141592f / 180.0f);
+	}
+};
+
 class Renderer {
 	
 
