@@ -63,6 +63,8 @@ class Renderer {
 
 	GLuint VAO = 0;
 
+	bool isPoint = true;
+
 public:
 	// Renderer 초기화
 	void begin(int count) {
@@ -82,11 +84,23 @@ public:
 		}
 	}
 
-	void updateVBO(const Vertex& point) {
+	// VBO에 정점 추가
+	void updateVBO(const Vertex& point, int index) {
+		glBindBuffer(GL_ARRAY_BUFFER, spiralVBO[index]);
 
+		// 어레이버퍼, 오프셋, 데이터 크기, 데이터의 포인터
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex), &point);
 	}
 
 	void draw() {
+		// VAO 공유
+		glBindVertexArray(VAO);
+
+		// VBO 별로 그리기
+		for (int i = 0; i < spiralVBO.size(); i++) {
+			glBindBuffer(GL_ARRAY_BUFFER, spiralVBO[i]);
+			glDrawArrays(isPoint ? GL_POINTS : GL_LINES, 0, sizeof(spiralVBO[i]));
+		}
 	}
 };
 
