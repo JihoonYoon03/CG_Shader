@@ -36,30 +36,37 @@ public:
 		currentVertex = center;
 		clockwise = (rand() % 2) ? 1 : -1;
 		end = center;
-		end.x += angleCap / angleIncrease * radiusIncrease * clockwise;
+		end.x += angleCap / angleIncrease * radiusIncrease * -clockwise * 2;
 	}
 
 	// 지속적으로 타이머를 통해 호출됨
 	void Spin() {
 
 		// 만약 900도 이상 돌았다면, 방향 전환 후 기준점은 end로 잡는다.
-		if (angle >= 900 || angle <= -900) {
+		if (angle >= 900 && expand) {
 			clockwise = -clockwise;
 			expand = false;
+			angle += 180;
+		}
+		else if (radius < 0) {
+			return;
 		}
 
 		angle += angleIncrease * clockwise;
 		radius += radiusIncrease * clockwise;
 
 		// 회전에 따른 현재 정점위치 계산. 이 값은 Renderer의 VBO에 저장
-		currentVertex.x = expand ? center.x : end.x + radius * cos(angle * 3.141592f / 180.0f);
-		currentVertex.y = expand ? center.y : end.y + radius * sin(angle * 3.141592f / 180.0f);
+		currentVertex.x = (expand ? center.x : end.x) + radius * cos(angle * 3.141592f / 180.0f);
+		currentVertex.y = (expand ? center.y : end.y) + radius * sin(angle * 3.141592f / 180.0f);
 	}
+
+	Vertex returnCurVertex() { return currentVertex; }
 };
 
 class Renderer {
 	
 	std::vector<GLuint> spiralVBO;
+	std::vector<unsigned int> pointCount; // 각 스파이럴 별 정점 개수
 
 	GLuint VAO = 0;
 
@@ -71,25 +78,29 @@ public:
 		glGenVertexArrays(1, &VAO);
 		glBindVertexArray(VAO);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-		glEnableVertexAttribArray(0);
-
 		// 스파이럴 개수만큼 VBO 생성 후 데이터공간 할당
 		for (int i = 0; i < count; i++) {
 			spiralVBO.push_back(0);
+			pointCount.push_back(0);
 			glGenBuffers(1, &spiralVBO.back());
 
 			glBindBuffer(GL_ARRAY_BUFFER, spiralVBO.back());
-			glBufferData(GL_ARRAY_BUFFER, 800 * sizeof(Vertex), NULL, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, 800 * sizeof(Vertex), NULL, GL_DYNAMIC_DRAW);
 		}
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+		glEnableVertexAttribArray(0);
 	}
 
 	// VBO에 정점 추가
 	void updateVBO(const Vertex& point, int index) {
+		if (pointCount[index] >= 800) return; // 최대 800개
+
 		glBindBuffer(GL_ARRAY_BUFFER, spiralVBO[index]);
 
 		// 어레이버퍼, 오프셋, 데이터 크기, 데이터의 포인터
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex), &point);
+		glBufferSubData(GL_ARRAY_BUFFER, pointCount[index] * sizeof(Vertex), sizeof(Vertex), &point);
+		pointCount[index]++;
 	}
 
 	void draw() {
@@ -99,12 +110,15 @@ public:
 		// VBO 별로 그리기
 		for (int i = 0; i < spiralVBO.size(); i++) {
 			glBindBuffer(GL_ARRAY_BUFFER, spiralVBO[i]);
-			glDrawArrays(isPoint ? GL_POINTS : GL_LINES, 0, sizeof(spiralVBO[i]));
+			glDrawArrays(isPoint ? GL_POINTS : GL_LINES, 0, pointCount[i]);
 		}
 	}
 };
 
+std::vector<Spiral> spirals;
 Renderer renderer;
+int spiralCount = 0;
+bool setCount = false, drawing = false;
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -130,7 +144,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
 	glutMouseFunc(Mouse);
-	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
 }
 
@@ -168,8 +181,12 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case '3':
 	case '4':
 	case '5':
-		// 개수만큼 생성, 렌더러 초기화
-		renderer.begin(key - '0');
+		if (!setCount) {
+			setCount = true;
+			// 개수만큼 생성, 렌더러 초기화
+			spiralCount = key - '0';
+			renderer.begin(spiralCount);
+		}
 	case 'c':
 		glutPostRedisplay();
 		break;
@@ -184,14 +201,32 @@ GLvoid Mouse(int button, int state, int mx, int my)
 	switch (button) {
 	case GLUT_LEFT_BUTTON:
 		if (state == GLUT_DOWN) {
+			if (!drawing && spiralCount) {
+				drawing = true;
+				GLfloat xGL, yGL;
+				mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
+				spirals.push_back(Spiral({ xGL, yGL, 0.0f }));
 
+				// 1개 초과일 경우 랜덤 위치에 추가
+				for (int i = 1; i < spiralCount; i++) {
+					GLfloat xGLrand = rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f; // -0.8 ~ 0.8
+					GLfloat yGLrand = rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f;
+					spirals.push_back(Spiral({ xGLrand, yGLrand, 0.0f }));
+				}
+
+				glutTimerFunc(1000 / 60, Timer, 0);
+			}
 		}
 		break;
 	}
 }
 
 GLvoid Timer(int value) {
+	for (int i = 0; i < spirals.size(); i++) {
+		spirals[i].Spin();
+		renderer.updateVBO(spirals[i].returnCurVertex(), i);
+	}
 
 	glutPostRedisplay();
-	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
+	if (drawing) glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
