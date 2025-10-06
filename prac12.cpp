@@ -42,15 +42,17 @@ public:
 private:
 	friend class Renderer;
 
+	Vertex center;
 	ColoredVertex vertices[5];	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
 	Shape currentShape, nextShape;
 
 	GLfloat speed = 0.1f;	// 변환 속도
+	std::vector<GLfloat> destX, destY; // 정점 별 목표위치
 
 public:
-	TransformShape(int shape, Vertex& center, GLfloat& size) : currentShape(static_cast<Shape>(shape)) {
+	TransformShape(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)) {
 
 		nextShape = static_cast<Shape>((shape + 1) % 4);
 
@@ -85,24 +87,11 @@ public:
 	}
 
 
-	// 타이머에서 계속 호출
-	void transform() {
-		switch (nextShape) {
-		case LINE:
-			transLine();
-			break;
-		case TRIANGLE:
-			transTriangle();
-			break;
-		case RECTANGLE:
-			transRectangle();
-			break;
-		case PENTAGON:
-			transPentagon();
-			break;
-		}
+	void nextAnim() {
+
 	}
 
+	// 타이머에서 계속 호출
 	void transLine() {
 
 	}
@@ -115,6 +104,8 @@ public:
 	void transPentagon() {
 
 	}
+
+	Shape getNextShape() { return nextShape; }
 };
 
 class Renderer {
@@ -249,6 +240,22 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 }
 
 GLvoid Timer(int value) {
+	for (auto& shape : shapeList) {
+		switch (shape.getNextShape()) {
+		case TransformShape::LINE:
+			shape.transLine();
+			break;
+		case TransformShape::TRIANGLE:
+			shape.transTriangle();
+			break;
+		case TransformShape::RECTANGLE:
+			shape.transRectangle();
+			break;
+		case TransformShape::PENTAGON:
+			shape.transPentagon();
+			break;
+		}
+	}
 	glutPostRedisplay();
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
