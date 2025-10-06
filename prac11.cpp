@@ -45,13 +45,11 @@ public:
 
 		// 만약 900도 이상 돌았다면, 방향 전환 후 기준점은 end로 잡는다.
 		if (angle >= angleCap && expand) {
-			std::cout << "Direction changed to counter spiral.\n";
 			clockwise = -clockwise;
 			expand = false;
 			angle += 180.0f;
 		}
 		else if (angle >= angleCap * 2 + 180 && !expand) {
-			std::cout << "Spiral ended.\n";
 			return;
 		}
 
@@ -113,6 +111,16 @@ public:
 			glDrawArrays(isPoint ? GL_POINTS : GL_LINES, 0, pointCount[i]);
 		}
 	}
+
+	void clear(){
+		spiralVAO.clear();
+		spiralVBO.clear();
+		pointCount.clear();
+		isPoint = true;
+	}
+
+	void renderModePoint() { isPoint = true; }
+	void renderModeLine() { isPoint = false; }
 };
 
 std::vector<Spiral> spirals;
@@ -171,10 +179,10 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
 	case 'p':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+		renderer.renderModePoint();
 		break;
 	case 'l':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		renderer.renderModeLine();
 		break;
 	case '1':	case '2':	case '3':	case '4':	case '5':
 		if (!setCount) {
@@ -182,7 +190,13 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 			// 개수 설정
 			spiralCount = key - '0';
 		}
+		break;
 	case 'c':
+		spirals.clear();
+		renderer.clear();
+		spiralCount = 0;
+		setCount = false;
+		drawing = false;
 		glutPostRedisplay();
 		break;
 	case 'q':
@@ -220,12 +234,13 @@ GLvoid Mouse(int button, int state, int mx, int my)
 }
 
 GLvoid Timer(int value) {
-	for (int i = 0; i < spirals.size(); i++) {
-		std::cout << "Spiral " << i << ": ";
-		spirals[i].Spin();
-		renderer.updateVBO(spirals[i].returnCurVertex(), i);
-	}
+	if (drawing) {
+		for (int i = 0; i < spirals.size(); i++) {
+			spirals[i].Spin();
+			renderer.updateVBO(spirals[i].returnCurVertex(), i);
+		}
 
-	glutPostRedisplay();
-	if (drawing) glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
+		glutPostRedisplay();
+		if (drawing) glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
+	}
 }
