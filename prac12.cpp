@@ -20,7 +20,7 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLfloat shapeSizeOffset = 0.1f;
+GLfloat shapeSizeOffset = 0.2f;
 
 Vertex ColorTable[5] = {
 	{1.0f, 0.0f, 0.0f},	// Red
@@ -48,7 +48,8 @@ private:
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
 	Shape currentShape, nextShape;
-	bool forward = true;	// 애니메이션 도형 진행 방향
+	bool forward = true, isLine = false, sleep = false;	// 애니메이션 도형 진행 방향
+	unsigned int sleepFrame = 0;
 
 	GLfloat speed = 0.1f;	// 변환 속도
 	std::vector<Vertex> dest; // 정점 별 목표위치
@@ -83,78 +84,103 @@ public:
 					vertices[RB].pos.y += size * 2;
 					vertices[T].pos.y -= size;
 					vertices[LT] = vertices[RT] = vertices[T];
+					isLine = true;
 				}
 			}
 		}
 	}
 
 
-	void nextAnim() {
-		currentShape = nextShape;
-		nextShape = static_cast<Shape>(currentShape + forward ? 1 : -1);
-		if (nextShape > PENTAGON) nextShape = LINE;
-		else if (nextShape < LINE) nextShape = PENTAGON;
+	void nextAnim(bool isFirst = false) {
+		// 첫 호출은 dest 세팅만
+		if (!isFirst) {
+			currentShape = nextShape;
+			nextShape = static_cast<Shape>(currentShape + (forward ? 1 : -1));
+			if (nextShape > PENTAGON) nextShape = LINE;
+			else if (nextShape < LINE) nextShape = PENTAGON;
 
-		// 목표 위치 초기화
-		dest.clear();
+			// 목표 위치 초기화
+			dest.clear();
+		}
+
+		sleepFrame = 30;
+		sleep = true;
 
 		// LB ~ RT까지 목표위치 설정. 순서는 VertexName enum 순서
 		switch (nextShape) {
-			case LINE:
-				dest.push_back({ center.x - size, center.y - size, 0.0f });
-				dest.push_back({ center.x + size, center.y + size, 0.0f });
-				dest.push_back({ center.x, center.y, 0.0f });
-				dest.push_back({ center.x, center.y, 0.0f });
-				dest.push_back({ center.x, center.y, 0.0f });
-				break;
+		case LINE:
+			dest.push_back({ center.x - size, center.y - size, 0.0f });
+			dest.push_back({ center.x + size, center.y + size, 0.0f });
+			dest.push_back({ center.x, center.y, 0.0f });
+			dest.push_back({ center.x, center.y, 0.0f });
+			dest.push_back({ center.x, center.y, 0.0f });
+			break;
 
-			case TRIANGLE:
-				dest.push_back({ center.x - size, center.y - size, 0.0f });
-				dest.push_back({ center.x + size, center.y - size, 0.0f });
-				dest.push_back({ center.x, center.y + size, 0.0f });
-				dest.push_back({ center.x, center.y, 0.0f });
-				dest.push_back({ center.x, center.y, 0.0f });
-				break;
+		case TRIANGLE:
+			dest.push_back({ center.x - size, center.y - size, 0.0f });
+			dest.push_back({ center.x + size, center.y - size, 0.0f });
+			dest.push_back({ center.x, center.y + size, 0.0f });
+			dest.push_back({ center.x, center.y, 0.0f });
+			dest.push_back({ center.x, center.y, 0.0f });
+			break;
 
-			case RECTANGLE:
-				dest.push_back({ center.x - size, center.y - size, 0.0f });
-				dest.push_back({ center.x + size, center.y - size, 0.0f });
-				dest.push_back({ center.x, center.y + size, 0.0f });
-				dest.push_back({ center.x - size, center.y + size, 0.0f });
-				dest.push_back({ center.x + size, center.y + size, 0.0f });
-				break;
+		case RECTANGLE:
+			dest.push_back({ center.x - size, center.y - size, 0.0f });
+			dest.push_back({ center.x + size, center.y - size, 0.0f });
+			dest.push_back({ center.x, center.y + size, 0.0f });
+			dest.push_back({ center.x - size, center.y + size, 0.0f });
+			dest.push_back({ center.x + size, center.y + size, 0.0f });
+			break;
 
-			case PENTAGON:
-				dest.push_back({ center.x - size * 0.65f, center.y - size, 0.0f });
-				dest.push_back({ center.x + size * 0.65f, center.y - size, 0.0f });
-				dest.push_back({ center.x, center.y + size * 1.25f, 0.0f });
-				dest.push_back({ center.x - size, center.y + size * 0.4f, 0.0f });
-				dest.push_back({ center.x + size, center.y + size * 0.4f, 0.0f });
-				break;
+		case PENTAGON:
+			dest.push_back({ center.x - size * 0.65f, center.y - size, 0.0f });
+			dest.push_back({ center.x + size * 0.65f, center.y - size, 0.0f });
+			dest.push_back({ center.x, center.y + size * 1.25f, 0.0f });
+			dest.push_back({ center.x - size, center.y + size * 0.4f, 0.0f });
+			dest.push_back({ center.x + size, center.y + size * 0.4f, 0.0f });
+			break;
 		}
 	}
 
 	// 타이머에서 계속 호출
 	void transform() {
-		bool allReached = true;
-
-		for (int i = 0; i < 5; i++) {
-			GLfloat xDiff = dest[i].x - vertices[i].pos.x;
-			GLfloat yDiff = dest[i].y - vertices[i].pos.y;
-			vertices[i].pos.x += xDiff * speed;
-			vertices[i].pos.y += yDiff * speed;
-
-			// 목표 위치에 미근접 시 false
-			if (abs(dest[i].x - vertices[i].pos.x) > 0.01f || abs(dest[i].y - vertices[i].pos.y) > 0.01f) allReached = false;
+		if (sleep) {
+			if (sleepFrame > 0)	sleepFrame--;
+			else {
+				sleep = false;
+				if (nextShape == LINE)
+					isLine = true;
+				else 
+					isLine = false;
+			}
 		}
+		else {
+			bool allReached = true;
 
-		if (allReached)	nextAnim();
+			for (int i = 0; i < 5; i++) {
+				GLfloat xDiff = dest[i].x - vertices[i].pos.x;
+				GLfloat yDiff = dest[i].y - vertices[i].pos.y;
+				vertices[i].pos.x += xDiff * speed;
+				vertices[i].pos.y += yDiff * speed;
+
+				// 목표 위치에 미근접 시 false
+				if (abs(dest[i].x - vertices[i].pos.x) > 0.001f || abs(dest[i].y - vertices[i].pos.y) > 0.001f)
+					allReached = false;
+				else {
+					// 목표 위치에 도달했을 경우, 정확히 맞추기
+					vertices[i].pos.x = dest[i].x;
+					vertices[i].pos.y = dest[i].y;
+				}
+			}
+
+			if (allReached)	nextAnim();
+		}
 	}
 };
 
 class Renderer {
 	std::vector<GLuint> VAOs, VBOs, EBOs;
-	bool onDisplay[5], isLine[5];
+	bool onDisplay[5];
 
 public:
 	Renderer() {
@@ -184,17 +210,23 @@ public:
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(sizeof(Vertex)));
 			glEnableVertexAttribArray(1);
 			onDisplay[i] = true;
-			isLine[i] = shapeList[i].currentShape == TransformShape::Shape::LINE ? true : false;
 		}
 		onDisplay[4] = false;	// 중앙 도형은 끄기
 	}
 
-	void draw() {
+	void updatePos(std::vector<TransformShape>& shapeList) {
+		for (int i = 0; i < shapeList.size(); i++) {
+			glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, 5 * sizeof(ColoredVertex), shapeList[i].vertices);
+		}
+	}
+
+	void draw(std::vector<TransformShape>& shapeList) {
 		for (int i = 0; i < VAOs.size(); i++) {
 			if (onDisplay[i] == false) continue;
 
 			glBindVertexArray(VAOs[i]);
-			glDrawElements(isLine[i] ? GL_LINE_STRIP : GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+			glDrawElements(shapeList[i].isLine ? GL_LINE_STRIP : GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 		}
 	}
 
@@ -228,6 +260,9 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	shapeList.push_back(newShape);
 
 	renderer.begin(shapeList);
+	for (auto& shape : shapeList) {
+		shape.nextAnim(true);	// 첫 목표 위치 설정
+	}
 
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
 	make_vertexShaders(vertexShader, "vertex.glsl"); //--- 버텍스 세이더 만들기
@@ -238,6 +273,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
+	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
 }
 
@@ -248,7 +284,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
-	renderer.draw();
+	renderer.draw(shapeList);
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -287,6 +323,8 @@ GLvoid Timer(int value) {
 	for (auto& shape : shapeList) {
 		shape.transform();
 	}
+
+	renderer.updatePos(shapeList);
 	glutPostRedisplay();
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
