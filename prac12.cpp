@@ -44,19 +44,23 @@ private:
 
 	ColoredVertex vertices[5];	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 	enum VertexName { LB = 0, RB, T, LT, RT };;
-	
-	Shape currentShape;
+
+	Shape currentShape, nextShape;
+
+	GLfloat speed = 0.1f;	// 변환 속도
 
 public:
 	TransformShape(int shape, Vertex& center, GLfloat& size) : currentShape(static_cast<Shape>(shape)) {
-		
+
+		nextShape = static_cast<Shape>((shape + 1) % 4);
+
 		// 기본 정점 초기화. 오각형에서 시작하고, 아래 switch문에서 점점 접어가기
 		vertices[LB] = { center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
 		vertices[RB] = { center.x + size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
 		vertices[T] = { center.x, center.y + size * 1.25f, 0.0f, ColorTable[shape] };
 		vertices[LT] = { center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
 		vertices[RT] = { center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
-		
+
 		// 도형 별 조정. break 없이 fallthrough
 		if (shape != PENTAGON) {
 			// RECTANGLE: 중앙 점 아래로 접기, 나머지 점 좌표 수정
@@ -80,6 +84,37 @@ public:
 		}
 	}
 
+
+	// 타이머에서 계속 호출
+	void transform() {
+		switch (nextShape) {
+		case LINE:
+			transLine();
+			break;
+		case TRIANGLE:
+			transTriangle();
+			break;
+		case RECTANGLE:
+			transRectangle();
+			break;
+		case PENTAGON:
+			transPentagon();
+			break;
+		}
+	}
+
+	void transLine() {
+
+	}
+	void transTriangle() {
+
+	}
+	void transRectangle() {
+
+	}
+	void transPentagon() {
+
+	}
 };
 
 class Renderer {
