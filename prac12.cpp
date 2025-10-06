@@ -57,6 +57,14 @@ public:
 			vertices[T] = { center.x, center.y, 0.0f, ColorTable[shape] };
 			vertices[LT] = vertices[RT] = vertices[T];
 			break;
+
+		case TRIANGLE:
+			// TRIANGLE: 좌하단 우하단 상단으로 삼각형 구성, 나머지 점은 상단에 대기
+			vertices[LB] = { center.x - size, center.y - size, 0.0f, ColorTable[shape] };
+			vertices[RB] = { center.x + size, center.y - size, 0.0f, ColorTable[shape] };
+			vertices[T] = { center.x, center.y + size, 0.0f, ColorTable[shape] };
+			vertices[LT] = vertices[RT] = vertices[T];
+			break;
 		}
 	}
 
