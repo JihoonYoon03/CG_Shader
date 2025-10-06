@@ -118,7 +118,6 @@ public:
 		spiralVAO.clear();
 		spiralVBO.clear();
 		pointCount.clear();
-		isPoint = true;
 	}
 
 	void renderModePoint() { isPoint = true; }
@@ -129,6 +128,7 @@ std::vector<Spiral> spirals;
 Renderer renderer;
 int spiralCount = 0;
 bool setCount = false, drawing = false;
+Vertex bgColor = { 0.1f, 0.1f, 0.1f };
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -160,8 +160,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 //--- 출력 콜백 함수
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	Vertex bgColor = { 0.1f, 0.1f, 0.1f };
-
 	glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
@@ -227,6 +225,10 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 				// Renderer 초기화
 				renderer.begin(spiralCount);
+
+				// 배경색, 정점 색(배경색의 보색) 설정
+				bgColor = randColor();
+				glUniform3f(glGetUniformLocation(shaderProgramID, "vertexColor"), 1.0f - bgColor.x, 1.0f - bgColor.y, 1.0f - bgColor.z);
 
 				glutTimerFunc(1000 / 60, Timer, 0);
 			}
