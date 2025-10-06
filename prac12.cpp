@@ -48,11 +48,11 @@ private:
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
 	Shape currentShape, nextShape;
-	bool forward = true, isLine = false, sleep = false;	// 애니메이션 도형 진행 방향
+	bool forward = true, isLine = false, sleep = false, animLoop = true, lock = false;	// 애니메이션 도형 진행 방향
 	unsigned int sleepFrame = 0;
 
 	GLfloat speed = 0.1f;	// 변환 속도
-	std::vector<Vertex> dest; // 정점 별 목표위치
+	std::vector<ColoredVertex> dest; // 정점 별 목표위치 및 색상
 
 public:
 	TransformShape(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)), size(size) {
@@ -106,44 +106,47 @@ public:
 		sleepFrame = 30;
 		sleep = true;
 
+		Vertex nextColor = ColorTable[nextShape];
 		// LB ~ RT까지 목표위치 설정. 순서는 VertexName enum 순서
 		switch (nextShape) {
 		case LINE:
-			dest.push_back({ center.x - size, center.y - size, 0.0f });
-			dest.push_back({ center.x + size, center.y + size, 0.0f });
-			dest.push_back({ center.x, center.y, 0.0f });
-			dest.push_back({ center.x, center.y, 0.0f });
-			dest.push_back({ center.x, center.y, 0.0f });
+			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x + size, center.y + size, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
 			break;
 
 		case TRIANGLE:
-			dest.push_back({ center.x - size, center.y - size, 0.0f });
-			dest.push_back({ center.x + size, center.y - size, 0.0f });
-			dest.push_back({ center.x, center.y + size, 0.0f });
-			dest.push_back({ center.x, center.y, 0.0f });
-			dest.push_back({ center.x, center.y, 0.0f });
+			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
+			dest.push_back({{ center.x + size, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y + size, 0.0f }, nextColor });
+			dest.push_back({{ center.x, center.y, 0.0f }, nextColor });
+			dest.push_back({{ center.x, center.y, 0.0f }, nextColor });
 			break;
 
 		case RECTANGLE:
-			dest.push_back({ center.x - size, center.y - size, 0.0f });
-			dest.push_back({ center.x + size, center.y - size, 0.0f });
-			dest.push_back({ center.x, center.y + size, 0.0f });
-			dest.push_back({ center.x - size, center.y + size, 0.0f });
-			dest.push_back({ center.x + size, center.y + size, 0.0f });
+			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x + size, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y + size, 0.0f }, nextColor });
+			dest.push_back({ { center.x - size, center.y + size, 0.0f }, nextColor });
+			dest.push_back({ { center.x + size, center.y + size, 0.0f }, nextColor });
 			break;
 
 		case PENTAGON:
-			dest.push_back({ center.x - size * 0.65f, center.y - size, 0.0f });
-			dest.push_back({ center.x + size * 0.65f, center.y - size, 0.0f });
-			dest.push_back({ center.x, center.y + size * 1.25f, 0.0f });
-			dest.push_back({ center.x - size, center.y + size * 0.4f, 0.0f });
-			dest.push_back({ center.x + size, center.y + size * 0.4f, 0.0f });
+			dest.push_back({ { center.x - size * 0.65f, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x + size * 0.65f, center.y - size, 0.0f }, nextColor });
+			dest.push_back({ { center.x, center.y + size * 1.25f, 0.0f }, nextColor });
+			dest.push_back({ { center.x - size, center.y + size * 0.4f, 0.0f }, nextColor });
+			dest.push_back({ { center.x + size, center.y + size * 0.4f, 0.0f }, nextColor });
 			break;
 		}
 	}
 
 	// 타이머에서 계속 호출
 	void transform() {
+		if (lock) return;
+
 		if (sleep) {
 			if (sleepFrame > 0)	sleepFrame--;
 			else {
@@ -158,24 +161,33 @@ public:
 			bool allReached = true;
 
 			for (int i = 0; i < 5; i++) {
-				GLfloat xDiff = dest[i].x - vertices[i].pos.x;
-				GLfloat yDiff = dest[i].y - vertices[i].pos.y;
+				GLfloat xDiff = dest[i].pos.x - vertices[i].pos.x;
+				GLfloat yDiff = dest[i].pos.y - vertices[i].pos.y;
 				vertices[i].pos.x += xDiff * speed;
 				vertices[i].pos.y += yDiff * speed;
 
 				// 목표 위치에 미근접 시 false
-				if (abs(dest[i].x - vertices[i].pos.x) > 0.001f || abs(dest[i].y - vertices[i].pos.y) > 0.001f)
+				if (abs(dest[i].pos.x - vertices[i].pos.x) > 0.001f || abs(dest[i].pos.y - vertices[i].pos.y) > 0.001f)
 					allReached = false;
 				else {
 					// 목표 위치에 도달했을 경우, 정확히 맞추기
-					vertices[i].pos.x = dest[i].x;
-					vertices[i].pos.y = dest[i].y;
+					vertices[i].pos.x = dest[i].pos.x;
+					vertices[i].pos.y = dest[i].pos.y;
 				}
 			}
 
-			if (allReached)	nextAnim();
+			if (allReached && animLoop)	nextAnim();
 		}
 	}
+
+	void setShape(Shape shape) {
+		nextShape = static_cast<Shape>(shape - (forward ? 1 : -1));
+		if (nextShape > PENTAGON) nextShape = LINE;
+		else if (nextShape < LINE) nextShape = PENTAGON;
+		nextAnim();
+	}
+
+	void toggleDirection() { forward = !forward; }
 };
 
 class Renderer {
@@ -212,6 +224,9 @@ public:
 			onDisplay[i] = true;
 		}
 		onDisplay[4] = false;	// 중앙 도형은 끄기
+		shapeList[4].animLoop = false;
+
+		shapeList[4].lock = true;
 	}
 
 	void updatePos(std::vector<TransformShape>& shapeList) {
@@ -230,6 +245,23 @@ public:
 		}
 	}
 
+	void displayOne(TransformShape& middle) {
+		if (onDisplay[4] == true) return;
+		for (int i = 0; i < 4; i++) {
+			onDisplay[i] = false;
+		};
+		onDisplay[4] = true;
+		middle.lock = false;
+	}
+
+	void displayAll(TransformShape& middle) {
+		if (onDisplay[4] == false) return;
+		for (int i = 0; i < 4; i++) {
+			onDisplay[i] = true;
+		};
+		onDisplay[4] = false;
+		middle.lock = true;
+	}
 };
 
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
@@ -299,19 +331,33 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
 	case 'l':
-		// 선 -> 삼각형
+		// 선
+		renderer.displayOne(shapeList[4]);
+		shapeList[4].setShape(TransformShape::LINE);
 		break;
 	case 't':
-		// 삼각형 -> 사각형
+		// 삼각형
+		renderer.displayOne(shapeList[4]);
+		shapeList[4].setShape(TransformShape::TRIANGLE);
 		break;
 	case 'r':
-		// 사각형 -> 오각형
+		// 사각형
+		renderer.displayOne(shapeList[4]);
+		shapeList[4].setShape(TransformShape::RECTANGLE);
 		break;
 	case 'p':
-		// 오각형 -> 선
+		// 오각형
+		renderer.displayOne(shapeList[4]);
+		shapeList[4].setShape(TransformShape::PENTAGON);
 		break;
 	case 'a':
-		// 4개 도형 다시 그리기
+		renderer.displayAll(shapeList[4]);
+		break;
+	case 'f':
+		for (auto& shape : shapeList) {
+			shape.toggleDirection();
+		}
+		bgColor = { 1.0f - bgColor.x, 1.0f - bgColor.y, 1.0f - bgColor.z };
 		break;
 	case 'q':
 		glutLeaveMainLoop();
