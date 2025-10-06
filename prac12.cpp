@@ -47,6 +47,7 @@ private:
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
 	Shape currentShape, nextShape;
+	bool forward = true;	// 애니메이션 도형 진행 방향
 
 	GLfloat speed = 0.1f;	// 변환 속도
 	std::vector<GLfloat> destX, destY; // 정점 별 목표위치
@@ -88,7 +89,10 @@ public:
 
 
 	void nextAnim() {
-
+		currentShape = nextShape;
+		nextShape = static_cast<Shape>(currentShape + forward ? 1 : -1);
+		if (nextShape > PENTAGON) nextShape = LINE;
+		else if (nextShape < LINE) nextShape = PENTAGON;
 	}
 
 	// 타이머에서 계속 호출
