@@ -15,7 +15,6 @@ GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Mouse(int button, int state, int mx, int my);
 GLvoid Timer(int value);
-void makeTriangle(GLfloat x, GLfloat y);
 
 //--- 필요한 변수 선언
 GLint winWidth = 800, winHeight = 600;
