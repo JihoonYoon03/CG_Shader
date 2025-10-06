@@ -22,11 +22,11 @@ GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
 GLfloat shapeSizeOffset = 0.2f;
 
-Vertex ColorTable[5] = {
+Vertex ColorTable[4] = {
 	{1.0f, 0.0f, 0.0f},	// Red
-	{0.0f, 1.0f, 0.0f},	// Green
+	{0.0f, 1.0f, 0.5f},	// Green
 	{0.0f, 0.0f, 1.0f},	// Blue
-	{1.0f, 0.0f, 1.0f}	// Magenta
+	{1.0f, 0.2f, 0.5f}	// Magenta
 };
 
 unsigned int indices[9] = {
@@ -51,7 +51,7 @@ private:
 	bool forward = true, isLine = false, sleep = false, animLoop = true, lock = false;	// 애니메이션 도형 진행 방향
 	unsigned int sleepFrame = 0;
 
-	GLfloat speed = 0.1f;	// 변환 속도
+	GLfloat speed = 0.05f;	// 변환 속도
 	std::vector<ColoredVertex> dest; // 정점 별 목표위치 및 색상
 
 public:
@@ -163,8 +163,15 @@ public:
 			for (int i = 0; i < 5; i++) {
 				GLfloat xDiff = dest[i].pos.x - vertices[i].pos.x;
 				GLfloat yDiff = dest[i].pos.y - vertices[i].pos.y;
+				Vertex colorDiff = { (dest[i].color.x - vertices[i].color.x) * speed,
+									 (dest[i].color.y - vertices[i].color.y) * speed,
+									 (dest[i].color.z - vertices[i].color.z) * speed };
+
 				vertices[i].pos.x += xDiff * speed;
 				vertices[i].pos.y += yDiff * speed;
+				vertices[i].color.x += colorDiff.x;
+				vertices[i].color.y += colorDiff.y;
+				vertices[i].color.z += colorDiff.z;
 
 				// 목표 위치에 미근접 시 false
 				if (abs(dest[i].pos.x - vertices[i].pos.x) > 0.001f || abs(dest[i].pos.y - vertices[i].pos.y) > 0.001f)
@@ -173,6 +180,7 @@ public:
 					// 목표 위치에 도달했을 경우, 정확히 맞추기
 					vertices[i].pos.x = dest[i].pos.x;
 					vertices[i].pos.y = dest[i].pos.y;
+					vertices[i].color = dest[i].color;
 				}
 			}
 
@@ -358,6 +366,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 			shape.toggleDirection();
 		}
 		bgColor = { 1.0f - bgColor.x, 1.0f - bgColor.y, 1.0f - bgColor.z };
+		for (int i = 0; i < 4; i++) {
+			ColorTable[i] = { 1.0f - ColorTable[i].x, 1.0f - ColorTable[i].y, 1.0f - ColorTable[i].z };
+		}
 		break;
 	case 'q':
 		glutLeaveMainLoop();
