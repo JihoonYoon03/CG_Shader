@@ -23,7 +23,8 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLfloat angleCap = 900.f, angleIncrease = 2.5f, radiusIncrease = 0.0005f;
+GLfloat angleOffset = 5.0f;
+GLfloat angleCap = 900.f, angleIncrease = 2.5f * angleOffset, radiusIncrease = 0.00125f * (angleOffset / 2);
 unsigned int vertexLimit = angleCap / angleIncrease * 2 + 10;
 
 class Spiral {
@@ -108,7 +109,8 @@ public:
 	void draw() {
 		for (int i = 0; i < spiralVAO.size(); i++) {
 			glBindVertexArray(spiralVAO[i]);
-			glDrawArrays(isPoint ? GL_POINTS : GL_LINES, 0, pointCount[i]);
+			isPoint ? glPointSize(2.5f) : glLineWidth(2.5f);
+			glDrawArrays(isPoint ? GL_POINTS : GL_LINE_STRIP, 0, pointCount[i]);
 		}
 	}
 
