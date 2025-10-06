@@ -43,6 +43,7 @@ private:
 	friend class Renderer;
 
 	Vertex center;
+	GLfloat size;
 	ColoredVertex vertices[5];	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
@@ -50,10 +51,10 @@ private:
 	bool forward = true;	// 애니메이션 도형 진행 방향
 
 	GLfloat speed = 0.1f;	// 변환 속도
-	std::vector<GLfloat> destX, destY; // 정점 별 목표위치
+	std::vector<Vertex> dest; // 정점 별 목표위치
 
 public:
-	TransformShape(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)) {
+	TransformShape(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)), size(size) {
 
 		nextShape = static_cast<Shape>((shape + 1) % 4);
 
@@ -93,23 +94,62 @@ public:
 		nextShape = static_cast<Shape>(currentShape + forward ? 1 : -1);
 		if (nextShape > PENTAGON) nextShape = LINE;
 		else if (nextShape < LINE) nextShape = PENTAGON;
+
+		// 목표 위치 초기화
+		dest.clear();
+
+		// LB ~ RT까지 목표위치 설정. 순서는 VertexName enum 순서
+		switch (nextShape) {
+			case LINE:
+				dest.push_back({ center.x - size, center.y - size, 0.0f });
+				dest.push_back({ center.x + size, center.y + size, 0.0f });
+				dest.push_back({ center.x, center.y, 0.0f });
+				dest.push_back({ center.x, center.y, 0.0f });
+				dest.push_back({ center.x, center.y, 0.0f });
+				break;
+
+			case TRIANGLE:
+				dest.push_back({ center.x - size, center.y - size, 0.0f });
+				dest.push_back({ center.x + size, center.y - size, 0.0f });
+				dest.push_back({ center.x, center.y + size, 0.0f });
+				dest.push_back({ center.x, center.y, 0.0f });
+				dest.push_back({ center.x, center.y, 0.0f });
+				break;
+
+			case RECTANGLE:
+				dest.push_back({ center.x - size, center.y - size, 0.0f });
+				dest.push_back({ center.x + size, center.y - size, 0.0f });
+				dest.push_back({ center.x, center.y + size, 0.0f });
+				dest.push_back({ center.x - size, center.y + size, 0.0f });
+				dest.push_back({ center.x + size, center.y + size, 0.0f });
+				break;
+
+			case PENTAGON:
+				dest.push_back({ center.x - size * 0.65f, center.y - size, 0.0f });
+				dest.push_back({ center.x + size * 0.65f, center.y - size, 0.0f });
+				dest.push_back({ center.x, center.y + size * 1.25f, 0.0f });
+				dest.push_back({ center.x - size, center.y + size * 0.4f, 0.0f });
+				dest.push_back({ center.x + size, center.y + size * 0.4f, 0.0f });
+				break;
+		}
 	}
 
 	// 타이머에서 계속 호출
-	void transLine() {
+	void transform() {
+		bool allReached = true;
 
+		for (int i = 0; i < 5; i++) {
+			GLfloat xDiff = dest[i].x - vertices[i].pos.x;
+			GLfloat yDiff = dest[i].y - vertices[i].pos.y;
+			vertices[i].pos.x += xDiff * speed;
+			vertices[i].pos.y += yDiff * speed;
+
+			// 목표 위치에 미근접 시 false
+			if (abs(dest[i].x - vertices[i].pos.x) > 0.01f || abs(dest[i].y - vertices[i].pos.y) > 0.01f) allReached = false;
+		}
+
+		if (allReached)	nextAnim();
 	}
-	void transTriangle() {
-
-	}
-	void transRectangle() {
-
-	}
-	void transPentagon() {
-
-	}
-
-	Shape getNextShape() { return nextShape; }
 };
 
 class Renderer {
@@ -245,20 +285,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 
 GLvoid Timer(int value) {
 	for (auto& shape : shapeList) {
-		switch (shape.getNextShape()) {
-		case TransformShape::LINE:
-			shape.transLine();
-			break;
-		case TransformShape::TRIANGLE:
-			shape.transTriangle();
-			break;
-		case TransformShape::RECTANGLE:
-			shape.transRectangle();
-			break;
-		case TransformShape::PENTAGON:
-			shape.transPentagon();
-			break;
-		}
+		shape.transform();
 	}
 	glutPostRedisplay();
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
