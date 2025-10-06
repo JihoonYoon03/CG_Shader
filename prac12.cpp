@@ -15,7 +15,7 @@ GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Timer(int value);
 
 //--- 필요한 변수 선언
-GLint winWidth = 800, winHeight = 600;
+GLint winWidth = 600, winHeight = 600;
 GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
@@ -32,7 +32,7 @@ Vertex ColorTable[5] = {
 unsigned int indices[9] = {
 	0, 1, 2,	// 중앙 삼각형
 	0, 2, 3,	// 좌상단 삼각형
-	1, 2, 4		// 우상단 삼각형
+	1, 4, 2		// 우상단 삼각형
 };
 
 class TransformShape {
@@ -49,22 +49,34 @@ private:
 
 public:
 	TransformShape(int shape, Vertex& center, GLfloat& size) : currentShape(static_cast<Shape>(shape)) {
-		switch (shape) {
-		case LINE:
-			// LINE: 좌하단 우하단으로 선 구성, 나머지 점은 정중앙에 대기
-			vertices[LB] = { center.x - size, center.y - size, 0.0f, ColorTable[shape] };
-			vertices[RB] = { center.x + size, center.y + size, 0.0f, ColorTable[shape]};
-			vertices[T] = { center.x, center.y, 0.0f, ColorTable[shape] };
-			vertices[LT] = vertices[RT] = vertices[T];
-			break;
-
-		case TRIANGLE:
-			// TRIANGLE: 좌하단 우하단 상단으로 삼각형 구성, 나머지 점은 상단에 대기
-			vertices[LB] = { center.x - size, center.y - size, 0.0f, ColorTable[shape] };
-			vertices[RB] = { center.x + size, center.y - size, 0.0f, ColorTable[shape] };
+		
+		// 기본 정점 초기화. 오각형에서 시작하고, 아래 switch문에서 점점 접어가기
+		vertices[LB] = { center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
+		vertices[RB] = { center.x + size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
+		vertices[T] = { center.x, center.y + size * 1.25f, 0.0f, ColorTable[shape] };
+		vertices[LT] = { center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
+		vertices[RT] = { center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
+		
+		// 도형 별 조정. break 없이 fallthrough
+		if (shape != PENTAGON) {
+			// RECTANGLE: 중앙 점 아래로 접기, 나머지 점 좌표 수정
+			vertices[LB].pos.x = center.x - size;
+			vertices[RB].pos.x = center.x + size;
 			vertices[T] = { center.x, center.y + size, 0.0f, ColorTable[shape] };
-			vertices[LT] = vertices[RT] = vertices[T];
-			break;
+			vertices[LT].pos.y = center.y + size;
+			vertices[RT].pos.y = center.y + size;
+
+			if (shape != RECTANGLE) {
+				// TRIANGLE: 좌상단, 우상단 중앙으로 접기
+				vertices[LT] = vertices[RT] = vertices[T];
+
+				if (shape != TRIANGLE) {
+					// LINE: 우하단 우상단으로, 나머지는 센터로 접기
+					vertices[RB].pos.y += size * 2;
+					vertices[T].pos.y -= size;
+					vertices[LT] = vertices[RT] = vertices[T];
+				}
+			}
 		}
 	}
 
