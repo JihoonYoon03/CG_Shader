@@ -13,6 +13,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="소스 파일\Shaders">
+      <UniqueIdentifier>{c1c04739-0a87-4c14-95d5-e850e194989c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -35,17 +38,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
     <None Include="fragment.glsl">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Shaders</Filter>
     </None>
     <None Include="fragment_prac11.glsl">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Shaders</Filter>
+    </None>
+    <None Include="vertex.glsl">
+      <Filter>소스 파일\Shaders</Filter>
     </None>
     <None Include="vertex_prac11.glsl">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
