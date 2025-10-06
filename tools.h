@@ -14,8 +14,8 @@ struct Vertex {
 };
 
 struct ColoredVertex {
-	GLfloat x = 0.0, y = 0.0, z = 0.0;
-	GLfloat r = 0.0, g = 0.0, b = 0.0;
+	Vertex pos;
+	Vertex color;
 };
 
 Vertex randColor();
