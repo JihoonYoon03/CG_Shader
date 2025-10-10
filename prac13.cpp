@@ -21,9 +21,10 @@ GLuint shaderProgramID; //--- 세이더 프로그램 이름
 GLuint vertexShader; //--- 버텍스 세이더 객체
 GLuint fragmentShader; //--- 프래그먼트 세이더 객체
 
-GLfloat shapeSizeOffset = 0.2f;
+GLfloat shapeSizeOffset = 0.1f;
 
-Vertex ColorTable[4] = {
+Vertex ColorTable[5] = {
+	{1.0f, 1.0f, 0.0f},	// Yellow
 	{1.0f, 0.0f, 0.0f},	// Red
 	{0.0f, 1.0f, 0.5f},	// Green
 	{0.0f, 0.0f, 1.0f},	// Blue
@@ -38,52 +39,52 @@ unsigned int indices[9] = {
 
 class ShapeObject {
 public:
-	enum Shape { LINE = 0, TRIANGLE, RECTANGLE, PENTAGON };
+	enum Shape { DOT = 0, LINE, TRIANGLE, RECTANGLE, PENTAGON };
 
 private:
 	friend class Renderer;
 
 	Vertex center;
 	GLfloat size;
-	ColoredVertex vertices[5];	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
-	enum VertexName { LB = 0, RB, T, LT, RT };;
+	std::vector<ColoredVertex> vertices;	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 
 	Shape currentShape;
-	bool isLine = false;
 	unsigned int sleepFrame = 0;
 
 	
 public:
-	ShapeObject(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)), size(size) {
-
-		// 기본 정점 초기화. 오각형에서 시작하고, 아래 switch문에서 점점 접어가기
-		vertices[LB] = { center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
-		vertices[RB] = { center.x + size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
-		vertices[T] = { center.x, center.y + size * 1.25f, 0.0f, ColorTable[shape] };
-		vertices[LT] = { center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
-		vertices[RT] = { center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[shape] };
-
-		// 도형 별 조정. break 없이 fallthrough
-		if (shape != PENTAGON) {
-			// RECTANGLE: 중앙 점 아래로 접기, 나머지 점 좌표 수정
-			vertices[LB].pos.x = center.x - size;
-			vertices[RB].pos.x = center.x + size;
-			vertices[T] = { center.x, center.y + size, 0.0f, ColorTable[shape] };
-			vertices[LT].pos.y = center.y + size;
-			vertices[RT].pos.y = center.y + size;
-
-			if (shape != RECTANGLE) {
-				// TRIANGLE: 좌상단, 우상단 중앙으로 접기
-				vertices[LT] = vertices[RT] = vertices[T];
-
-				if (shape != TRIANGLE) {
-					// LINE: 우하단 우상단으로, 나머지는 센터로 접기
-					vertices[RB].pos.y += size * 2;
-					vertices[T].pos.y -= size;
-					vertices[LT] = vertices[RT] = vertices[T];
-					isLine = true;
-				}
-			}
+	ShapeObject(Shape shape, Vertex& center, GLfloat& size) : center(center), currentShape(shape), size(size) {
+		switch (shape) {
+		case DOT:
+			// 중앙
+			vertices.push_back({ center.x, center.y, 0.0f, ColorTable[shape] });
+			break;
+		case LINE:
+			// 좌하, 우상
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size, center.y + size, 0.0f, ColorTable[shape] });
+			break;
+		case TRIANGLE:
+			// 좌하, 우하, 중앙
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x, center.y + size, 0.0f, ColorTable[shape] });
+			break;
+		case RECTANGLE:
+			// 좌상, 좌하, 우하, 우상
+			vertices.push_back({ center.x - size, center.y + size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size, center.y + size, 0.0f, ColorTable[shape] });
+			break;
+		case PENTAGON:
+			// 좌하, 우하, 중앙, 좌상, 우상
+			vertices.push_back({ center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size * 0.65f, center.y - size, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x, center.y + size * 1.25f, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[shape] });
+			vertices.push_back({ center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[shape] });
+			break;
 		}
 	}
 
@@ -91,12 +92,12 @@ public:
 
 class Renderer {
 	std::vector<GLuint> VAOs, VBOs, EBOs;
-	bool onDisplay[5];
 
 public:
 	Renderer() {
-		
-
+		VAOs.resize(15);
+		VBOs.resize(15);
+		EBOs.resize(15);
 	}
 
 	// VAO, VBO, EBO 초기화 및 데이터 연결
@@ -108,33 +109,47 @@ public:
 
 			glBindVertexArray(VAOs[i]);
 			glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
-			glBufferData(GL_ARRAY_BUFFER, 5 * sizeof(ColoredVertex), shapeList[i].vertices, GL_DYNAMIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, 5 * sizeof(ColoredVertex), shapeList[i].vertices.data(), GL_DYNAMIC_DRAW);
 
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, 9 * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+			if (shapeList[i].currentShape == ShapeObject::RECTANGLE || shapeList[i].currentShape == ShapeObject::PENTAGON) {
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, 9 * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+			}
 
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
 			glEnableVertexAttribArray(0);
 
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(sizeof(Vertex)));
 			glEnableVertexAttribArray(1);
-			onDisplay[i] = true;
 		}
 	}
 
 	void updatePos(std::vector<ShapeObject>& shapeList) {
-		for (int i = 0; i < shapeList.size(); i++) {
-			glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
-			glBufferSubData(GL_ARRAY_BUFFER, 0, 5 * sizeof(ColoredVertex), shapeList[i].vertices);
-		}
+		
 	}
 
 	void draw(std::vector<ShapeObject>& shapeList) {
 		for (int i = 0; i < VAOs.size(); i++) {
-			if (onDisplay[i] == false) continue;
-
 			glBindVertexArray(VAOs[i]);
-			glDrawElements(shapeList[i].isLine ? GL_LINE_STRIP : GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+			switch (shapeList[i].currentShape) {
+				case ShapeObject::DOT:
+					glPointSize(10.0f);
+					glDrawArrays(GL_POINTS, 0, 1);
+					break;
+				case ShapeObject::LINE:
+					glLineWidth(2.0f);
+					glDrawArrays(GL_LINE_STRIP, 0, 2);
+					break;
+				case ShapeObject::TRIANGLE:
+					glDrawArrays(GL_TRIANGLES, 0, 3);
+					break;
+				case ShapeObject::RECTANGLE:
+					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+					break;
+				case ShapeObject::PENTAGON:
+					glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+					break;
+			}
 		}
 	}
 };
@@ -156,6 +171,18 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	//--- GLEW 초기화하기
 	glewExperimental = GL_TRUE;
 	glewInit();
+
+	// 도형 데이터 초기화
+	for (int i = 0; i < 15; i++) {
+		Vertex center = {	rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
+							rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f, 
+							rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f };
+
+		ShapeObject::Shape shape = static_cast<ShapeObject::Shape>(i % 5);
+
+		shapeList.push_back({ shape, center, shapeSizeOffset });
+	}
+	renderer.begin(shapeList);
 
 	
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
@@ -179,6 +206,7 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
+	renderer.draw(shapeList);
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
