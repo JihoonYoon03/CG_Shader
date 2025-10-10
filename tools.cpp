@@ -28,28 +28,51 @@ rtPos randRectPos(GLfloat offset) {
 	return pos;
 }
 
-void mPosToGL(GLuint width, GLuint height, int mx, int my, GLfloat& xGL, GLfloat& yGL)
+void mPosToGL(GLuint winWidth, GLuint winHeight, int mx, int my, GLfloat& xGL, GLfloat& yGL)
 {
-	xGL = (mx / (width / 2.0f)) - 1.0f;
-	yGL = 1.0f - (my / (height / 2.0f));
+	xGL = (mx / (winWidth / 2.0f)) - 1.0f;
+	yGL = 1.0f - (my / (winHeight / 2.0f));
 }
 
-bool isMouseIn(rtPos& pos, GLuint width, GLuint height, int mx, int my)
+bool isMouseIn(rtPos& pos, GLuint winWidth, GLuint winHeight, int mx, int my)
 {
 	GLfloat xGL, yGL;
-	mPosToGL(width, height, mx, my, xGL, yGL);
+	mPosToGL(winWidth, winHeight, mx, my, xGL, yGL);
 
 	if (xGL > pos.x1 && xGL < pos.x2 && yGL < pos.y1 && yGL > pos.y2) return true;
 	else return false;
 }
 
-bool checkCollide(Vertex& center, GLuint width, GLuint height, GLfloat distCap, int mx, int my) {
-	GLfloat xGL, yGL;
-	mPosToGL(width, height, mx, my, xGL, yGL);
+bool CircleCollider(Vertex& center, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
 	GLfloat dist = sqrt((center.x - xGL) * (center.x - xGL) + (center.y - yGL) * (center.y - yGL));
 	if (dist < distCap) {
 		return true;
 	}
+	return false;
+}
+
+bool LineCollider(Vertex& p1, Vertex& p2, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
+	GLfloat m;
+	m = (p2.y - p1.y) / (p2.x - p1.x);	// 기울기
+
+	// y - y1 = m(x - x1)
+	GLfloat xOnLine = (yGL - p1.y) / m + p1.x; // y좌표에 대응하는 x좌표
+	GLfloat yOnLine = m * (xGL - p1.x) + p1.y; // x좌표에 대응하는 y좌표
+
+	GLfloat minX = std::min(p1.x, p2.x) - distCap * 0.5f;
+	GLfloat maxX = std::max(p1.x, p2.x) + distCap * 0.5f;
+	GLfloat minY = std::min(p1.y, p2.y) - distCap * 0.5f;
+	GLfloat maxY = std::max(p1.y, p2.y) + distCap * 0.5f;
+
+	// 선분 범위 내에 있는지 확인
+	if (xGL < minX || xGL > maxX || yGL < minY || yGL > maxY) {
+		return false;
+	}
+
+	if (abs(xOnLine - xGL) < distCap && abs(yOnLine - yGL) < distCap) {
+		return true;
+	}
+
 	return false;
 }
 

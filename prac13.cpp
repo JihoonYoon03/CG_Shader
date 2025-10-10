@@ -51,7 +51,7 @@ private:
 	Shape currentShape;
 	unsigned int sleepFrame = 0;
 
-	
+
 public:
 	ShapeObject(Shape shape, Vertex& center, GLfloat& size) : center(center), currentShape(shape), size(size) {
 		switch (shape) {
@@ -85,6 +85,28 @@ public:
 			vertices.push_back({ center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[shape] });
 			vertices.push_back({ center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[shape] });
 			break;
+		}
+	}
+
+	// 커서와의 거리 체크
+	bool cursorDistCheck(GLfloat xGL, GLfloat yGL) {
+		if (sqrt((center.x - xGL) * (center.x - xGL) + (center.y - yGL) * (center.y - yGL)) < size * 1.5f)
+			return true;
+	}
+
+	// 클릭 여부 체크
+	bool clickCheck(GLfloat xGL, GLfloat yGL) {
+		switch (currentShape) {
+		case DOT:
+			return CircleCollider(center, winWidth, winHeight, 0.05f, xGL, yGL);
+		case LINE:
+			return LineCollider(vertices[0].pos, vertices[1].pos, winWidth, winHeight, size * 0.25f, xGL, yGL);
+		case TRIANGLE:
+			return false;
+		case RECTANGLE:
+			return false;
+		case PENTAGON:
+			return false;
 		}
 	}
 
@@ -125,30 +147,30 @@ public:
 	}
 
 	void updatePos(std::vector<ShapeObject>& shapeList) {
-		
+
 	}
 
 	void draw(std::vector<ShapeObject>& shapeList) {
 		for (int i = 0; i < VAOs.size(); i++) {
 			glBindVertexArray(VAOs[i]);
 			switch (shapeList[i].currentShape) {
-				case ShapeObject::DOT:
-					glPointSize(10.0f);
-					glDrawArrays(GL_POINTS, 0, 1);
-					break;
-				case ShapeObject::LINE:
-					glLineWidth(2.0f);
-					glDrawArrays(GL_LINE_STRIP, 0, 2);
-					break;
-				case ShapeObject::TRIANGLE:
-					glDrawArrays(GL_TRIANGLES, 0, 3);
-					break;
-				case ShapeObject::RECTANGLE:
-					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-					break;
-				case ShapeObject::PENTAGON:
-					glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
-					break;
+			case ShapeObject::DOT:
+				glPointSize(10.0f);
+				glDrawArrays(GL_POINTS, 0, 1);
+				break;
+			case ShapeObject::LINE:
+				glLineWidth(2.0f);
+				glDrawArrays(GL_LINE_STRIP, 0, 2);
+				break;
+			case ShapeObject::TRIANGLE:
+				glDrawArrays(GL_TRIANGLES, 0, 3);
+				break;
+			case ShapeObject::RECTANGLE:
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+				break;
+			case ShapeObject::PENTAGON:
+				glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+				break;
 			}
 		}
 	}
@@ -157,6 +179,8 @@ public:
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
 Renderer renderer;
 std::vector<ShapeObject> shapeList;
+bool dragging = false;
+int dragIndex = -1;
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -174,8 +198,8 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 
 	// 도형 데이터 초기화
 	for (int i = 0; i < 15; i++) {
-		Vertex center = {	rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
-							rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f, 
+		Vertex center = { rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
+							rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
 							rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f };
 
 		ShapeObject::Shape shape = static_cast<ShapeObject::Shape>(i % 5);
@@ -184,7 +208,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	}
 	renderer.begin(shapeList);
 
-	
+
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
 	make_vertexShaders(vertexShader, "vertex.glsl"); //--- 버텍스 세이더 만들기
 	make_fragmentShaders(fragmentShader, "fragment.glsl"); //--- 프래그먼트 세이더 만들기
@@ -219,11 +243,27 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 
 GLvoid Mouse(int button, int state, int x, int y)
 {
-	if (state == GLUT_DOWN) {
-		switch (button) {
-		case GLUT_LEFT_BUTTON:
-			break;
+	switch (button) {
+	case GLUT_LEFT_BUTTON:
+		if (state == GLUT_DOWN) {
+			if (!dragging) {
+				GLfloat xGL, yGL;
+				mPosToGL(winWidth, winHeight, x, y, xGL, yGL);
+				for (auto& shape : shapeList) {
+					if (!shape.cursorDistCheck(xGL, yGL)) continue;
+					if (shape.clickCheck(xGL, yGL)) {
+						dragging = true;
+						dragIndex = &shape - &shapeList[0];
+						std::cout << "clicked " << std::endl;
+					}
+				}
+			}
 		}
+		else if (state == GLUT_UP) {
+			dragging = false;
+			dragIndex = -1;
+		}
+		break;
 	}
 }
 

@@ -22,9 +22,10 @@ Vertex randColor();
 rtPos randSquarePos(GLfloat offset);
 rtPos randRectPos(GLfloat offset);
 
-void mPosToGL(GLuint width, GLuint height, int mx, int my, GLfloat& xGL, GLfloat& yGL);
-bool isMouseIn(rtPos& pos, GLuint width, GLuint height, int mx, int my);
-bool checkCollide(Vertex& center, GLuint width, GLuint height, GLfloat distCap, int mx, int my);
+void mPosToGL(GLuint winWidth, GLuint winHeight, int mx, int my, GLfloat& xGL, GLfloat& yGL);
+bool isMouseIn(rtPos& pos, GLuint winWidth, GLuint winHeight, int mx, int my);
+bool CircleCollider(Vertex& center, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL);
+bool LineCollider(Vertex& p1, Vertex& p2, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL);
 
 char* filetobuf(const char* file);
 void make_vertexShaders(GLuint& vertexShader, const std::string& shaderName);

@@ -340,7 +340,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					Vertex center = { rectList[i * 8 + 2].x + (rectList[i * 8].x - rectList[i * 8 + 2].x) / 2.0f,
 										rectList[i * 8 + 4].y + (rectList[i * 8].y - rectList[i * 8 + 4].y) / 2.0f, 0.0f };
 
-					if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
+					if (CircleCollider(center, winWidth, winHeight, 0.05f, mx, my)) {
 						currentShape = 3;
 						selectedIndex = i;
 						std::cout << "rectangle selected" << std::endl;
@@ -353,7 +353,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					for (int i = 0; i < triangleListSize; i++) {
 						Vertex center = { triangleList[i * 6].x,
 										  triangleList[i * 6 + 2].y + (triangleList[i * 6].y - triangleList[i * 6 + 2].y) / 2.0f, 0.0f };
-						if (checkCollide(center, winWidth, winHeight, 0.04f, mx, my)) {
+						if (CircleCollider(center, winWidth, winHeight, 0.04f, mx, my)) {
 							currentShape = 2;
 							selectedIndex = i;
 							std::cout << "triangle selected" << std::endl;
@@ -367,7 +367,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 					for (int i = 0; i < lineListSize; i++) {
 						Vertex center = { lineList[i * 4].x + (lineList[i * 4 + 2].x - lineList[i * 4].x) / 2.0f,
 										  lineList[i * 4 + 2].y + (lineList[i * 4].y - lineList[i * 4 + 2].y) / 2.0f, 0.0f };
-						if (checkCollide(center, winWidth, winHeight, 0.05f, mx, my)) {
+						if (CircleCollider(center, winWidth, winHeight, 0.05f, mx, my)) {
 							currentShape = 1;
 							selectedIndex = i;
 							std::cout << "line selected" << std::endl;
@@ -379,7 +379,7 @@ GLvoid Mouse(int button, int state, int mx, int my)
 
 				if (!checked) {
 					for (int i = 0; i < vertexListSize; i++) {
-						if (checkCollide(vertexList[i * 2], winWidth, winHeight, 0.02f, mx, my)) {
+						if (CircleCollider(vertexList[i * 2], winWidth, winHeight, 0.02f, mx, my)) {
 							currentShape = 0;
 							selectedIndex = i;
 							std::cout << "point selected" << std::endl;
