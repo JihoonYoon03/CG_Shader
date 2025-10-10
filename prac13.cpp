@@ -98,18 +98,19 @@ public:
 	bool clickCheck(GLfloat xGL, GLfloat yGL) {
 		switch (currentShape) {
 		case DOT:
-			return CircleCollider(center, winWidth, winHeight, 0.05f, xGL, yGL);
+			return CircleCollider(center, 0.05f, xGL, yGL);
 		case LINE:
-			return LineCollider(vertices[0].pos, vertices[1].pos, winWidth, winHeight, size * 0.25f, xGL, yGL);
+			return LineCollider(vertices[0].pos, vertices[1].pos, size * 0.25f, xGL, yGL);
 		case TRIANGLE:
-			return false;
+			return CircleCollider(center, size * 1.25f, xGL, yGL);
 		case RECTANGLE:
-			return false;
+			return RectCollider(vertices[0].pos, vertices[2].pos, xGL, yGL);
 		case PENTAGON:
-			return false;
+			return CircleCollider(center, size * 1.25f, xGL, yGL);
 		}
 	}
 
+	Shape getShape() {	return currentShape;	}
 };
 
 class Renderer {
@@ -249,12 +250,13 @@ GLvoid Mouse(int button, int state, int x, int y)
 			if (!dragging) {
 				GLfloat xGL, yGL;
 				mPosToGL(winWidth, winHeight, x, y, xGL, yGL);
-				for (auto& shape : shapeList) {
-					if (!shape.cursorDistCheck(xGL, yGL)) continue;
-					if (shape.clickCheck(xGL, yGL)) {
+				for (int i = shapeList.size() - 1; i >= 0; i--) {
+					if (!shapeList[i].cursorDistCheck(xGL, yGL)) continue;
+					if (shapeList[i].clickCheck(xGL, yGL)) {
 						dragging = true;
-						dragIndex = &shape - &shapeList[0];
-						std::cout << "clicked " << std::endl;
+						dragIndex = i;
+						std::cout << "Shape " << i << " selected: " << shapeList[i].getShape() << std::endl;
+						break;
 					}
 				}
 			}

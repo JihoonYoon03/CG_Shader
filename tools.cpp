@@ -43,7 +43,7 @@ bool isMouseIn(rtPos& pos, GLuint winWidth, GLuint winHeight, int mx, int my)
 	else return false;
 }
 
-bool CircleCollider(Vertex& center, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
+bool CircleCollider(Vertex& center, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
 	GLfloat dist = sqrt((center.x - xGL) * (center.x - xGL) + (center.y - yGL) * (center.y - yGL));
 	if (dist < distCap) {
 		return true;
@@ -51,7 +51,7 @@ bool CircleCollider(Vertex& center, GLuint winWidth, GLuint winHeight, GLfloat d
 	return false;
 }
 
-bool LineCollider(Vertex& p1, Vertex& p2, GLuint winWidth, GLuint winHeight, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
+bool LineCollider(Vertex& p1, Vertex& p2, GLfloat distCap, GLfloat xGL, GLfloat yGL) {
 	GLfloat m;
 	m = (p2.y - p1.y) / (p2.x - p1.x);	// 기울기
 
@@ -74,6 +74,16 @@ bool LineCollider(Vertex& p1, Vertex& p2, GLuint winWidth, GLuint winHeight, GLf
 	}
 
 	return false;
+}
+
+bool RectCollider(Vertex& p1, Vertex& p2, GLfloat xGL, GLfloat yGL) {
+	GLfloat minX = std::min(p1.x, p2.x);
+	GLfloat maxX = std::max(p1.x, p2.x);
+	GLfloat minY = std::min(p1.y, p2.y);
+	GLfloat maxY = std::max(p1.y, p2.y);
+
+	if (xGL > minX && xGL < maxX && yGL > minY && yGL < maxY) return true;
+	else return false;
 }
 
 char* filetobuf(const char* file)
