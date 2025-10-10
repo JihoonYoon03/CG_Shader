@@ -12,8 +12,8 @@
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
+GLvoid MouseMotion(int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
-GLvoid Timer(int value);
 
 //--- 필요한 변수 선언
 GLint winWidth = 600, winHeight = 600;
@@ -48,6 +48,7 @@ private:
 	GLfloat size;
 	std::vector<ColoredVertex> vertices;	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 
+	GLfloat dx = 0.0f, dy = 0.0f;
 	Shape currentShape;
 	unsigned int sleepFrame = 0;
 
@@ -110,6 +111,17 @@ public:
 		}
 	}
 
+	void dragTo(GLfloat xGL, GLfloat yGL) {
+		dx = xGL - center.x;
+		dy = yGL - center.y;
+		center.x = xGL;
+		center.y = yGL;
+		for (auto& v : vertices) {
+			v.pos.x += dx;
+			v.pos.y += dy;
+		}
+	}
+
 	Shape getShape() {	return currentShape;	}
 };
 
@@ -147,8 +159,10 @@ public:
 		}
 	}
 
-	void updatePos(std::vector<ShapeObject>& shapeList) {
-
+	void updatePos(ShapeObject& shape, int index) {
+		glBindVertexArray(VAOs[index]);
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data());
 	}
 
 	void draw(std::vector<ShapeObject>& shapeList) {
@@ -219,8 +233,8 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutMouseFunc(Mouse);
+	glutMotionFunc(MouseMotion);
 	glutKeyboardFunc(Keyboard);
-	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
 }
 
@@ -255,7 +269,6 @@ GLvoid Mouse(int button, int state, int x, int y)
 					if (shapeList[i].clickCheck(xGL, yGL)) {
 						dragging = true;
 						dragIndex = i;
-						std::cout << "Shape " << i << " selected: " << shapeList[i].getShape() << std::endl;
 						break;
 					}
 				}
@@ -266,6 +279,22 @@ GLvoid Mouse(int button, int state, int x, int y)
 			dragIndex = -1;
 		}
 		break;
+	}
+}
+
+GLvoid MouseMotion(int x, int y) {
+	if (dragging && dragIndex != -1) {
+		GLfloat xGL, yGL;
+		mPosToGL(winWidth, winHeight, x, y, xGL, yGL);
+
+		if (xGL < -1.0f) xGL = -1.0f;
+		else if (xGL > 1.0f) xGL = 1.0f;
+		if (yGL < -1.0f) yGL = -1.0f;
+		else if (yGL > 1.0f) yGL = 1.0f;
+
+		shapeList[dragIndex].dragTo(xGL, yGL);
+		renderer.updatePos(shapeList[dragIndex], dragIndex);
+		glutPostRedisplay();
 	}
 }
 
@@ -282,9 +311,4 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		glutLeaveMainLoop();
 		return;
 	}
-}
-
-GLvoid Timer(int value) {
-	glutPostRedisplay();
-	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
