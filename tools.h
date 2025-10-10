@@ -24,9 +24,9 @@ rtPos randRectPos(GLfloat offset);
 
 void mPosToGL(GLuint winWidth, GLuint winHeight, int mx, int my, GLfloat& xGL, GLfloat& yGL);
 bool isMouseIn(rtPos& pos, GLuint winWidth, GLuint winHeight, int mx, int my);
-bool CircleCollider(Vertex& center, GLfloat distCap, GLfloat xGL, GLfloat yGL);
-bool LineCollider(Vertex& p1, Vertex& p2, GLfloat distCap, GLfloat xGL, GLfloat yGL);
-bool RectCollider(Vertex& p1, Vertex& p2, GLfloat xGL, GLfloat yGL);
+bool CircleCollider(const Vertex& center, GLfloat distCap, GLfloat xGL, GLfloat yGL);
+bool LineCollider(const Vertex& p1, const Vertex& p2, GLfloat distCap, GLfloat xGL, GLfloat yGL);
+bool RectCollider(const Vertex& p1, const Vertex& p2, GLfloat xGL, GLfloat yGL);
 
 char* filetobuf(const char* file);
 void make_vertexShaders(GLuint& vertexShader, const std::string& shaderName);

@@ -89,12 +89,6 @@ public:
 		}
 	}
 
-	// 커서와의 거리 체크
-	bool cursorDistCheck(GLfloat xGL, GLfloat yGL) {
-		if (sqrt((center.x - xGL) * (center.x - xGL) + (center.y - yGL) * (center.y - yGL)) < size * 1.5f)
-			return true;
-	}
-
 	// 클릭 여부 체크
 	bool clickCheck(GLfloat xGL, GLfloat yGL) {
 		switch (currentShape) {
@@ -122,7 +116,53 @@ public:
 		}
 	}
 
+	void absorb(ShapeObject& other) {
+		// 점 개수 기준 값
+		int sumShape = ((currentShape + 1) + (other.currentShape + 1));
+		if (sumShape > 5) sumShape = 1;
+
+		// 인덱스화 (-1)
+		currentShape = static_cast<Shape>(sumShape - 1);
+
+		center = { (center.x + other.center.x) * 0.5f, (center.y + other.center.y) * 0.5f, 0.0f };
+
+		vertices.clear();
+		switch (currentShape) {
+		case DOT:
+			// 중앙
+			vertices.push_back({ center.x, center.y, 0.0f, ColorTable[currentShape] });
+			break;
+		case LINE:
+			// 좌하, 우상
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size, center.y + size, 0.0f, ColorTable[currentShape] });
+			break;
+		case TRIANGLE:
+			// 좌하, 우하, 중앙
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x, center.y + size, 0.0f, ColorTable[currentShape] });
+			break;
+		case RECTANGLE:
+			// 좌상, 좌하, 우하, 우상
+			vertices.push_back({ center.x - size, center.y + size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x - size, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size, center.y + size, 0.0f, ColorTable[currentShape] });
+			break;
+		case PENTAGON:
+			// 좌하, 우하, 중앙, 좌상, 우상
+			vertices.push_back({ center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size * 0.65f, center.y - size, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x, center.y + size * 1.25f, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x - size, center.y + size * 0.4f, 0.0f, ColorTable[currentShape] });
+			vertices.push_back({ center.x + size, center.y + size * 0.4f, 0.0f, ColorTable[currentShape] });
+			break;
+		}
+	}
+
 	Shape getShape() {	return currentShape;	}
+	Vertex getCenter() { return center; }
 };
 
 class Renderer {
@@ -159,14 +199,24 @@ public:
 		}
 	}
 
-	void updatePos(ShapeObject& shape, int index) {
+	void updatePos(ShapeObject& shape, int index, bool updateEBO = false) {
 		glBindVertexArray(VAOs[index]);
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data());
+		glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data(), GL_DYNAMIC_DRAW);
+
+		if (updateEBO) {
+			if (shape.getShape() == ShapeObject::RECTANGLE || shape.getShape() == ShapeObject::PENTAGON) {
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[index]);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, 9 * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+			}
+			else {
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			}
+		}
 	}
 
 	void draw(std::vector<ShapeObject>& shapeList) {
-		for (int i = 0; i < VAOs.size(); i++) {
+		for (int i = 0; i < shapeList.size(); i++) {
 			glBindVertexArray(VAOs[i]);
 			switch (shapeList[i].currentShape) {
 			case ShapeObject::DOT:
@@ -188,6 +238,16 @@ public:
 				break;
 			}
 		}
+	}
+
+	void deleteData(int index) {
+		glDeleteVertexArrays(1, &VAOs[index]);
+		glDeleteBuffers(1, &VBOs[index]);
+		glDeleteBuffers(1, &EBOs[index]);
+
+		VAOs.erase(VAOs.begin() + index);
+		VBOs.erase(VBOs.begin() + index);
+		EBOs.erase(EBOs.begin() + index);
 	}
 };
 
@@ -265,7 +325,7 @@ GLvoid Mouse(int button, int state, int x, int y)
 				GLfloat xGL, yGL;
 				mPosToGL(winWidth, winHeight, x, y, xGL, yGL);
 				for (int i = shapeList.size() - 1; i >= 0; i--) {
-					if (!shapeList[i].cursorDistCheck(xGL, yGL)) continue;
+					if (!CircleCollider(shapeList[i].getCenter(), shapeSizeOffset * 1.5f, xGL, yGL)) continue;
 					if (shapeList[i].clickCheck(xGL, yGL)) {
 						dragging = true;
 						dragIndex = i;
@@ -275,6 +335,26 @@ GLvoid Mouse(int button, int state, int x, int y)
 			}
 		}
 		else if (state == GLUT_UP) {
+			if (dragIndex == -1) break;
+			Vertex dragCenter = shapeList[dragIndex].getCenter();
+			int combined = dragIndex, absorbed = -1;
+			
+			for (int i = shapeList.size() - 1; i >= 0; i--) {
+				if (i == dragIndex || !CircleCollider(shapeList[i].getCenter(), shapeSizeOffset * 3.0f, dragCenter.x, dragCenter.y)) continue;
+				combined = std::min(i, dragIndex);
+				absorbed = std::max(i, dragIndex);
+				break;
+			}
+
+
+			if (absorbed != -1) {
+				// 충돌 시 모양 변경 후 흡수된 도형 삭제
+				shapeList[combined].absorb(shapeList[absorbed]);
+				renderer.deleteData(absorbed);
+				shapeList.erase(shapeList.begin() + absorbed);
+				renderer.updatePos(shapeList[combined], combined, true);
+			}
+
 			dragging = false;
 			dragIndex = -1;
 		}
