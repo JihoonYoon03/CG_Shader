@@ -11,6 +11,7 @@
 //--- 아래 5개 함수는 사용자 정의 함수 임
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
+GLvoid Mouse(int button, int state, int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Timer(int value);
 
@@ -35,7 +36,7 @@ unsigned int indices[9] = {
 	1, 4, 2		// 우상단 삼각형
 };
 
-class TransformShape {
+class ShapeObject {
 public:
 	enum Shape { LINE = 0, TRIANGLE, RECTANGLE, PENTAGON };
 
@@ -47,17 +48,13 @@ private:
 	ColoredVertex vertices[5];	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 	enum VertexName { LB = 0, RB, T, LT, RT };;
 
-	Shape currentShape, nextShape;
-	bool forward = true, isLine = false, sleep = false, animLoop = true, lock = false;	// 애니메이션 도형 진행 방향
+	Shape currentShape;
+	bool isLine = false;
 	unsigned int sleepFrame = 0;
 
-	GLfloat speed = 0.05f;	// 변환 속도
-	std::vector<ColoredVertex> dest; // 정점 별 목표위치 및 색상
-
+	
 public:
-	TransformShape(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)), size(size) {
-
-		nextShape = static_cast<Shape>((shape + 1) % 4);
+	ShapeObject(int shape, Vertex& center, GLfloat& size) : center(center), currentShape(static_cast<Shape>(shape)), size(size) {
 
 		// 기본 정점 초기화. 오각형에서 시작하고, 아래 switch문에서 점점 접어가기
 		vertices[LB] = { center.x - size * 0.65f, center.y - size, 0.0f, ColorTable[shape] };
@@ -90,112 +87,6 @@ public:
 		}
 	}
 
-
-	void nextAnim(bool isFirst = false) {
-		// 첫 호출은 dest 세팅만
-		if (!isFirst) {
-			currentShape = nextShape;
-			nextShape = static_cast<Shape>(currentShape + (forward ? 1 : -1));
-			if (nextShape > PENTAGON) nextShape = LINE;
-			else if (nextShape < LINE) nextShape = PENTAGON;
-
-			// 목표 위치 초기화
-			dest.clear();
-		}
-
-		sleepFrame = 30;
-		sleep = true;
-
-		Vertex nextColor = ColorTable[nextShape];
-		// LB ~ RT까지 목표위치 설정. 순서는 VertexName enum 순서
-		switch (nextShape) {
-		case LINE:
-			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size, center.y + size, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
-			break;
-
-		case TRIANGLE:
-			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y + size, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y, 0.0f }, nextColor });
-			break;
-
-		case RECTANGLE:
-			dest.push_back({ { center.x - size, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y + size, 0.0f }, nextColor });
-			dest.push_back({ { center.x - size, center.y + size, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size, center.y + size, 0.0f }, nextColor });
-			break;
-
-		case PENTAGON:
-			dest.push_back({ { center.x - size * 0.65f, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size * 0.65f, center.y - size, 0.0f }, nextColor });
-			dest.push_back({ { center.x, center.y + size * 1.25f, 0.0f }, nextColor });
-			dest.push_back({ { center.x - size, center.y + size * 0.4f, 0.0f }, nextColor });
-			dest.push_back({ { center.x + size, center.y + size * 0.4f, 0.0f }, nextColor });
-			break;
-		}
-	}
-
-	// 타이머에서 계속 호출
-	void transform() {
-		if (lock) return;
-
-		if (sleep) {
-			if (sleepFrame > 0)	sleepFrame--;
-			else {
-				sleep = false;
-				if (nextShape == LINE)
-					isLine = true;
-				else
-					isLine = false;
-			}
-		}
-		else {
-			bool allReached = true;
-
-			for (int i = 0; i < 5; i++) {
-				GLfloat xDiff = dest[i].pos.x - vertices[i].pos.x;
-				GLfloat yDiff = dest[i].pos.y - vertices[i].pos.y;
-				Vertex colorDiff = { (dest[i].color.x - vertices[i].color.x) * speed,
-									 (dest[i].color.y - vertices[i].color.y) * speed,
-									 (dest[i].color.z - vertices[i].color.z) * speed };
-
-				vertices[i].pos.x += xDiff * speed;
-				vertices[i].pos.y += yDiff * speed;
-				vertices[i].color.x += colorDiff.x;
-				vertices[i].color.y += colorDiff.y;
-				vertices[i].color.z += colorDiff.z;
-
-				// 목표 위치에 미근접 시 false
-				if (abs(dest[i].pos.x - vertices[i].pos.x) > 0.001f || abs(dest[i].pos.y - vertices[i].pos.y) > 0.001f)
-					allReached = false;
-				else {
-					// 목표 위치에 도달했을 경우, 정확히 맞추기
-					vertices[i].pos.x = dest[i].pos.x;
-					vertices[i].pos.y = dest[i].pos.y;
-					vertices[i].color = dest[i].color;
-				}
-			}
-
-			if (allReached && animLoop)	nextAnim();
-		}
-	}
-
-	void setShape(Shape shape) {
-		nextShape = static_cast<Shape>(shape - (forward ? 1 : -1));
-		if (nextShape > PENTAGON) nextShape = LINE;
-		else if (nextShape < LINE) nextShape = PENTAGON;
-		nextAnim();
-	}
-
-	void toggleDirection() { forward = !forward; }
 };
 
 class Renderer {
@@ -204,14 +95,12 @@ class Renderer {
 
 public:
 	Renderer() {
-		// 5번째 인덱스는 중앙 큰 도형용
-		VAOs.resize(5);
-		VBOs.resize(5);
-		EBOs.resize(5);
+		
+
 	}
 
 	// VAO, VBO, EBO 초기화 및 데이터 연결
-	void begin(std::vector<TransformShape>& shapeList) {
+	void begin(std::vector<ShapeObject>& shapeList) {
 		for (int i = 0; i < shapeList.size(); i++) {
 			glGenVertexArrays(1, &VAOs[i]);
 			glGenBuffers(1, &VBOs[i]);
@@ -231,20 +120,16 @@ public:
 			glEnableVertexAttribArray(1);
 			onDisplay[i] = true;
 		}
-		onDisplay[4] = false;	// 중앙 도형은 끄기
-		shapeList[4].animLoop = false;
-
-		shapeList[4].lock = true;
 	}
 
-	void updatePos(std::vector<TransformShape>& shapeList) {
+	void updatePos(std::vector<ShapeObject>& shapeList) {
 		for (int i = 0; i < shapeList.size(); i++) {
 			glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
 			glBufferSubData(GL_ARRAY_BUFFER, 0, 5 * sizeof(ColoredVertex), shapeList[i].vertices);
 		}
 	}
 
-	void draw(std::vector<TransformShape>& shapeList) {
+	void draw(std::vector<ShapeObject>& shapeList) {
 		for (int i = 0; i < VAOs.size(); i++) {
 			if (onDisplay[i] == false) continue;
 
@@ -252,29 +137,11 @@ public:
 			glDrawElements(shapeList[i].isLine ? GL_LINE_STRIP : GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 		}
 	}
-
-	void displayOne(TransformShape& middle) {
-		if (onDisplay[4] == true) return;
-		for (int i = 0; i < 4; i++) {
-			onDisplay[i] = false;
-		};
-		onDisplay[4] = true;
-		middle.lock = false;
-	}
-
-	void displayAll(TransformShape& middle) {
-		if (onDisplay[4] == false) return;
-		for (int i = 0; i < 4; i++) {
-			onDisplay[i] = true;
-		};
-		onDisplay[4] = false;
-		middle.lock = true;
-	}
 };
 
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
 Renderer renderer;
-std::vector<TransformShape> shapeList;
+std::vector<ShapeObject> shapeList;
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -290,20 +157,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	for (int i = 0; i < 4; i++) {
-		Vertex center = { (i % 2 == 0 ? -0.5f : 0.5f), (i < 2 ? 0.5f : -0.5f), 0.0f };
-		TransformShape newShape(i, center, shapeSizeOffset);
-		shapeList.push_back(newShape);
-	}
-	Vertex center = { 0.0f, 0.0f, 0.0f };
-	TransformShape newShape(0, center, shapeSizeOffset);
-	shapeList.push_back(newShape);
-
-	renderer.begin(shapeList);
-	for (auto& shape : shapeList) {
-		shape.nextAnim(true);	// 첫 목표 위치 설정
-	}
-
+	
 	//--- 세이더 읽어와서 세이더 프로그램 만들기: 사용자 정의함수 호출
 	make_vertexShaders(vertexShader, "vertex.glsl"); //--- 버텍스 세이더 만들기
 	make_fragmentShaders(fragmentShader, "fragment.glsl"); //--- 프래그먼트 세이더 만들기
@@ -312,6 +166,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	//--- 세이더 프로그램 만들기
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
+	glutMouseFunc(Mouse);
 	glutKeyboardFunc(Keyboard);
 	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
@@ -324,7 +179,6 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 
-	renderer.draw(shapeList);
 
 	glutSwapBuffers(); // 화면에 출력하기
 }
@@ -335,40 +189,24 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 	glViewport(0, 0, w, h);
 }
 
+GLvoid Mouse(int button, int state, int x, int y)
+{
+	if (state == GLUT_DOWN) {
+		switch (button) {
+		case GLUT_LEFT_BUTTON:
+			break;
+		}
+	}
+}
+
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
-	case 'l':
-		// 선
-		renderer.displayOne(shapeList[4]);
-		shapeList[4].setShape(TransformShape::LINE);
+	case 'c':
+		// 리셋하고 다시 그리기
 		break;
-	case 't':
-		// 삼각형
-		renderer.displayOne(shapeList[4]);
-		shapeList[4].setShape(TransformShape::TRIANGLE);
-		break;
-	case 'r':
-		// 사각형
-		renderer.displayOne(shapeList[4]);
-		shapeList[4].setShape(TransformShape::RECTANGLE);
-		break;
-	case 'p':
-		// 오각형
-		renderer.displayOne(shapeList[4]);
-		shapeList[4].setShape(TransformShape::PENTAGON);
-		break;
-	case 'a':
-		renderer.displayAll(shapeList[4]);
-		break;
-	case 'f':
-		for (auto& shape : shapeList) {
-			shape.toggleDirection();
-		}
-		bgColor = { 1.0f - bgColor.x, 1.0f - bgColor.y, 1.0f - bgColor.z };
-		for (int i = 0; i < 4; i++) {
-			ColorTable[i] = { 1.0f - ColorTable[i].x, 1.0f - ColorTable[i].y, 1.0f - ColorTable[i].z };
-		}
+	case 's':
+		// 애니메이션 일시정지
 		break;
 	case 'q':
 		glutLeaveMainLoop();
@@ -377,11 +215,6 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 }
 
 GLvoid Timer(int value) {
-	for (auto& shape : shapeList) {
-		shape.transform();
-	}
-
-	renderer.updatePos(shapeList);
 	glutPostRedisplay();
 	glutTimerFunc(1000 / 60, Timer, 0); // 60 FPS
 }
