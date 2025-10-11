@@ -24,15 +24,6 @@
     <ClCompile Include="tools.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="prac8.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="prac9.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="prac10.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="prac11.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -40,6 +31,9 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="prac13.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="prac14.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
