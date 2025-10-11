@@ -35,8 +35,9 @@ unsigned int indicesR[12] = {
 	0, 4, 3,
 	1, 5, 0,
 	2, 6, 1,
-	3, 7, 2
+	3, 7, 2 
 };
+
 
 class SpecialRt {
 	friend class Renderer;
@@ -44,23 +45,36 @@ class SpecialRt {
 	// 극좌표 사용
 	Vertex center;
 	GLfloat radInner, radOuter;
-	GLfloat angle = 45.0f, angleOffset = 5.0f;
+	GLfloat angle = 0.0f, angleOffset = 2.5f;
 
 	std::vector<ColoredVertex> vertices;
 
+	bool isIn = false;
 public:
-	SpecialRt(const Vertex& center, const GLfloat& In, const GLfloat& Out) : center(center), radInner(In), radOuter(Out) {
+	SpecialRt(const Vertex& center, const GLfloat& In, const GLfloat& Out, bool isIn) : center(center), radInner(In), radOuter(Out), isIn(isIn) {
 		for (int j = 0; j < 2; j++) {
 			for (int i = 0; i < 4; i++) {
+				GLfloat radius = j == 0 ? radInner : radOuter;
+				GLfloat currAngle = (j == 0) ? (i * 90.0f + 45.0f) : (i * 90.0f);
+
 				vertices.push_back({
-					center.x + (j == 0 ? radInner * cos((i * 90.0f + angle) * PI / 180.0f) : radOuter * cos((i * 90.0f) * PI / 180.0f)),
-					center.y + (j == 0 ? radInner * sin((i * 90.0f + angle) * PI / 180.0f) : radOuter * sin((i * 90.0f) * PI / 180.0f)),
+					center.x + radius * cos(currAngle * PI / 180.0f),
+					center.y + radius * sin(currAngle * PI / 180.0f),
 					0.0f,
 					{1.0f, 0.5f, 0.0f} });
 			}
 		}
 	}
 
+	void spin(Vertex base, bool clockwise) {
+		for (int i = 0; i < 8; i++) {
+			GLfloat distX = vertices[i].pos.x - base.x;
+			GLfloat distY = vertices[i].pos.y - base.y;
+
+			vertices[i].pos.x = base.x + (distX * cos((clockwise ? -angleOffset : angleOffset) * PI / 180.0f) - distY * sin((clockwise ? -angleOffset : angleOffset) * PI / 180.0f));
+			vertices[i].pos.y = base.y + (distX * sin((clockwise ? -angleOffset : angleOffset) * PI / 180.0f) + distY * cos((clockwise ? -angleOffset : angleOffset) * PI / 180.0f));
+		}
+	}
 };
 
 class Renderer {
@@ -84,7 +98,7 @@ public:
 			glBufferData(GL_ARRAY_BUFFER, shapeList[i].vertices.size() * sizeof(ColoredVertex), shapeList[i].vertices.data(), GL_DYNAMIC_DRAW);
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(unsigned int), shapeList[i].isIn ? indicesR : indices, GL_DYNAMIC_DRAW);
 
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)0);
 			glEnableVertexAttribArray(0);
@@ -92,6 +106,12 @@ public:
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ColoredVertex), (void*)(3 * sizeof(GLfloat)));
 			glEnableVertexAttribArray(1);
 		}
+	}
+
+	void updateVBO(SpecialRt& shape, int index) {
+		glBindVertexArray(VAOs[index]);
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data());
 	}
 
 	void draw() {
@@ -104,10 +124,11 @@ public:
 };
 
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
+Vertex spinBase = { 0.0f, 0.0f, 0.0f };
 Renderer renderer;
 std::vector<SpecialRt> shapeList;
-bool pause = false;
-GLfloat Inner = 0.1f, Outer = 0.14f;
+bool pause = false, clockwise = true;
+GLfloat Inner = 0.1f, Outer = 0.14f, reverse = 0.02f;;
 
 //--- 메인 함수
 void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
@@ -124,11 +145,19 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glewInit();
 
 	// 도형 데이터 초기화
+	srand((unsigned int)time(NULL));
 	int randMax = rand() % 5 + 3; // 3 ~ 7
 	for (int i = 0; i < randMax; i++) {
-		shapeList.push_back({ {rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f,
-								rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f, 0.0f},
-								Inner, Outer });
+		if (rand() % 2 == 0) {
+			shapeList.push_back({ {rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f,
+									rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f, 0.0f},
+									Inner, Outer, false });
+		}
+		else {
+			shapeList.push_back({ {rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f,
+									rand() / static_cast<float>(RAND_MAX) * 1.6f - 0.8f, 0.0f},
+									Inner, reverse, true });
+		}
 	}
 	renderer.begin(shapeList, randMax);
 
@@ -141,7 +170,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
-	glutTimerFunc(1000 / 60, Timer, 0);
+	glutTimerFunc(1000 / 60, Timer, clockwise);
 	glutMainLoop();
 }
 
@@ -168,12 +197,24 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	switch (key) {
 	case 'c':
 		// 화면 가운데 중심 시계방향 회전
+		if (!clockwise || pause) {
+			pause = false;
+			clockwise = true;
+			glutTimerFunc(1000 / 60, Timer, clockwise);
+		}
 		break;
 	case 't':
 		// 화면 가운데 중심 반시계방향 회전
+		if (clockwise || pause) {
+			pause = false;
+			clockwise = false;
+			glutTimerFunc(1000 / 60, Timer, clockwise);
+		}
 		break;
 	case 's':
 		// 애니메이션 일시정지
+		pause = !pause;
+		if (!pause) glutTimerFunc(1000 / 60, Timer, clockwise);
 		break;
 	case 'q':
 		glutLeaveMainLoop();
@@ -182,7 +223,11 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 }
 
 GLvoid Timer(int value) {
-	if (pause) return;
+	if (pause || value != clockwise) return;
+	for (auto& s : shapeList) {
+		s.spin(spinBase, clockwise);
+		renderer.updateVBO(s, &s - &shapeList[0]);
+	}
 	glutPostRedisplay();
-	glutTimerFunc(1000 / 60, Timer, 0);
+	glutTimerFunc(1000 / 60, Timer, clockwise);
 }
