@@ -366,6 +366,21 @@ public:
 		VBOs.erase(VBOs.begin() + index);
 		EBOs.erase(EBOs.begin() + index);
 	}
+
+	void reset() {
+		for (int i = 0; i < VAOs.size(); i++) {
+			glDeleteVertexArrays(1, &VAOs[i]);
+			glDeleteBuffers(1, &VBOs[i]);
+			glDeleteBuffers(1, &EBOs[i]);
+		}
+		VAOs.clear();
+		VBOs.clear();
+		EBOs.clear();
+
+		VAOs.resize(15);
+		VBOs.resize(15);
+		EBOs.resize(15);
+	}
 };
 
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
@@ -504,9 +519,22 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	switch (key) {
 	case 'c':
 		// 리셋하고 다시 그리기
+		shapeList.clear();
+		renderer.reset();
+		for (int i = 0; i < 15; i++) {
+			Vertex center = { rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
+								rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f,
+								rand() / static_cast<float>(RAND_MAX) * 2.0f - 1.0f };
+			ShapeObject::Shape shape = static_cast<ShapeObject::Shape>(i % 5);
+			shapeList.push_back({ shape, center, shapeSizeOffset });
+		}
+		renderer.begin(shapeList);
+		glutPostRedisplay();
 		break;
 	case 's':
 		// 애니메이션 일시정지
+		pause = !pause;
+		if (!pause) glutTimerFunc(1000 / 60, Timer, 0);
 		break;
 	case 'q':
 		glutLeaveMainLoop();
