@@ -14,6 +14,7 @@ GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid MouseMotion(int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
+GLvoid Timer(int value);
 
 //--- 필요한 변수 선언
 GLint winWidth = 600, winHeight = 600;
@@ -48,9 +49,9 @@ private:
 	GLfloat size;
 	std::vector<ColoredVertex> vertices;	// 0: 좌하단, 1: 우하단, 2: 상단, 3: 좌상단, 4: 우상단
 
-	GLfloat dx = 0.0f, dy = 0.0f;
+	GLfloat dragX = 0.0f, dragY = 0.0f, dx = 0.0f, dy = 0.0f, speed = 0.025f;
 	Shape currentShape;
-	unsigned int sleepFrame = 0;
+	bool animation = false, drag = false, bouncing = false, movedown = true;
 
 
 public:
@@ -106,13 +107,13 @@ public:
 	}
 
 	void dragTo(GLfloat xGL, GLfloat yGL) {
-		dx = xGL - center.x;
-		dy = yGL - center.y;
+		dragX = xGL - center.x;
+		dragY = yGL - center.y;
 		center.x = xGL;
 		center.y = yGL;
 		for (auto& v : vertices) {
-			v.pos.x += dx;
-			v.pos.y += dy;
+			v.pos.x += dragX;
+			v.pos.y += dragY;
 		}
 	}
 
@@ -161,7 +162,115 @@ public:
 		}
 	}
 
-	Shape getShape() {	return currentShape;	}
+	void startAnimation() {
+		bouncing = false;
+		animation = true;
+		GLfloat dLen;
+		switch (rand() % 2) {
+		case 0:
+			dx = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
+			dy = rand() / static_cast<float>(RAND_MAX) * 2 - 1.0f;
+			dLen = sqrt(dx * dx + dy * dy);
+			dx /= dLen; dy /= dLen;
+			bouncing = true;
+			break;
+		case 1:
+			dx = rand() % 2 == 0 ? -1.0f : 1.0f;
+			dy = 0;
+			break;
+		}
+	}
+
+	void animUpdate() {
+		if (!animation || drag) return;
+
+		GLfloat xyCap = currentShape == DOT ? 1.0f : 1.0f - size;
+
+		if (bouncing) {
+			// 바운싱 모드: 랜덤 방향으로 이동하다가 벽에서 튕기기
+			center.x += dx * speed;
+			center.y += dy * speed;
+
+			// 좌우 벽 충돌 체크
+			if (center.x < -xyCap) {
+				center.x = -xyCap;
+				dx = -dx;
+			}
+			else if (center.x > xyCap) {
+				center.x = xyCap;
+				dx = -dx;
+			}
+
+			// 상하 벽 충돌 체크
+			if (center.y < -xyCap) {
+				center.y = -xyCap;
+				dy = -dy;
+			}
+			else if (center.y > xyCap) {
+				center.y = xyCap;
+				dy = -dy;
+			}
+
+			// 모든 정점 업데이트
+			for (auto& v : vertices) {
+				v.pos.x += dx * speed;
+				v.pos.y += dy * speed;
+			}
+		}
+		else {
+			// 수평 이동
+			if (dy == 0) {
+				center.x += dx * speed;
+				for (auto& v : vertices) {
+					v.pos.x += dx * speed;
+				}
+
+				// 좌우 벽 충돌 체크
+				if (center.x <= -xyCap || center.x >= xyCap) {
+					GLfloat offset = center.x <= 0 ? -xyCap - center.x : xyCap - center.x;
+
+					if (center.x < 0) center.x = -xyCap;
+					if (center.x > 0) center.x = xyCap;
+
+					for (auto& v : vertices) {
+						v.pos.x += offset;
+					}
+
+					dx = -dx;
+					dy = movedown ? -1.0f : 1.0f;  // 수직 이동 시작
+				}
+
+			}
+			// 수직 이동
+			else {
+				center.y += dy * speed;
+				for (auto& v : vertices) {
+					v.pos.y += dy * speed;
+				}
+
+				if (center.y <= -xyCap || center.y >= xyCap) {
+					GLfloat offset = center.y <= 0 ? -xyCap - center.y : xyCap - center.y;
+					
+					if (center.y < 0) center.y = -xyCap;
+					if (center.y > 0) center.y = xyCap;
+					for (auto& v : vertices) {
+						v.pos.y += offset;
+					}
+
+					dy = -dy;
+					movedown = !movedown;
+				}
+
+				dy -= dy * 0.1f;
+				if (abs(dy) < 0.1f) {
+					dy = 0;
+				}
+			}
+		}
+	}
+
+	void dragging(bool state) { drag = state; }
+	Shape getShape() { return currentShape; }
 	Vertex getCenter() { return center; }
 };
 
@@ -199,7 +308,8 @@ public:
 		}
 	}
 
-	void updatePos(ShapeObject& shape, int index, bool updateEBO = false) {
+	// 데이터 구조 변경
+	void refreshPos(ShapeObject& shape, int index, bool updateEBO = false) {
 		glBindVertexArray(VAOs[index]);
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
 		glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data(), GL_DYNAMIC_DRAW);
@@ -213,6 +323,13 @@ public:
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 			}
 		}
+	}
+
+	// 단순 데이터 변경
+	void updatePos(ShapeObject& shape, int index) {
+		glBindVertexArray(VAOs[index]);
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, shape.vertices.size() * sizeof(ColoredVertex), shape.vertices.data());
 	}
 
 	void draw(std::vector<ShapeObject>& shapeList) {
@@ -254,7 +371,7 @@ public:
 Vertex bgColor = { 0.1f, 0.1f, 0.1f };
 Renderer renderer;
 std::vector<ShapeObject> shapeList;
-bool dragging = false;
+bool dragging = false, pause = false;
 int dragIndex = -1;
 
 //--- 메인 함수
@@ -295,6 +412,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutMouseFunc(Mouse);
 	glutMotionFunc(MouseMotion);
 	glutKeyboardFunc(Keyboard);
+	glutTimerFunc(1000 / 60, Timer, 0);
 	glutMainLoop();
 }
 
@@ -329,6 +447,7 @@ GLvoid Mouse(int button, int state, int x, int y)
 					if (shapeList[i].clickCheck(xGL, yGL)) {
 						dragging = true;
 						dragIndex = i;
+						shapeList[i].dragging(true);
 						break;
 					}
 				}
@@ -338,7 +457,7 @@ GLvoid Mouse(int button, int state, int x, int y)
 			if (dragIndex == -1) break;
 			Vertex dragCenter = shapeList[dragIndex].getCenter();
 			int combined = dragIndex, absorbed = -1;
-			
+
 			for (int i = shapeList.size() - 1; i >= 0; i--) {
 				if (i == dragIndex || !CircleCollider(shapeList[i].getCenter(), shapeSizeOffset * 3.0f, dragCenter.x, dragCenter.y)) continue;
 				combined = std::min(i, dragIndex);
@@ -350,11 +469,13 @@ GLvoid Mouse(int button, int state, int x, int y)
 			if (absorbed != -1) {
 				// 충돌 시 모양 변경 후 흡수된 도형 삭제
 				shapeList[combined].absorb(shapeList[absorbed]);
+				shapeList[combined].startAnimation();
 				renderer.deleteData(absorbed);
 				shapeList.erase(shapeList.begin() + absorbed);
-				renderer.updatePos(shapeList[combined], combined, true);
+				renderer.refreshPos(shapeList[combined], combined, true);
 			}
 
+			shapeList[combined].dragging(false);
 			dragging = false;
 			dragIndex = -1;
 		}
@@ -391,4 +512,14 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		glutLeaveMainLoop();
 		return;
 	}
+}
+
+GLvoid Timer(int value) {
+	if (pause) return;
+	for (int i = 0; i < shapeList.size(); i++) {
+		shapeList[i].animUpdate();
+		renderer.updatePos(shapeList[i], i);
+	}
+	glutPostRedisplay();
+	glutTimerFunc(1000 / 60, Timer, 0);
 }
