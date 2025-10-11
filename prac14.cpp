@@ -12,7 +12,6 @@
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
-GLvoid MouseMotion(int x, int y);
 GLvoid Keyboard(unsigned char key, int x, int y);
 GLvoid Timer(int value);
 
@@ -170,6 +169,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutDisplayFunc(drawScene); //--- 출력 콜백 함수
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
+	glutMouseFunc(Mouse);
 	glutTimerFunc(1000 / 60, Timer, clockwise);
 	glutMainLoop();
 }
@@ -219,6 +219,14 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case 'q':
 		glutLeaveMainLoop();
 		return;
+	}
+}
+
+GLvoid Mouse(int button, int state, int x, int y) {
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		GLfloat xGL, yGL;
+		mPosToGL(winWidth, winHeight, x, y, xGL, yGL);
+		spinBase = { xGL, yGL, 0.0f };
 	}
 }
 
