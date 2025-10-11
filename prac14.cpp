@@ -43,12 +43,12 @@ class SpecialRt {
 
 	// 극좌표 사용
 	Vertex center;
-	GLfloat radInner, radOuter;
+	GLfloat radInner, radOuter, breathAmount = 0.0f;
 	GLfloat angle = 0.0f, angleOffset = 2.5f;
 
 	std::vector<ColoredVertex> vertices;
 
-	bool isIn = false;
+	bool isIn = false, breath = true;
 public:
 	SpecialRt(const Vertex& center, const GLfloat& In, const GLfloat& Out, bool isIn) : center(center), radInner(In), radOuter(Out), isIn(isIn) {
 		for (int j = 0; j < 2; j++) {
@@ -66,12 +66,35 @@ public:
 	}
 
 	void spin(Vertex base, bool clockwise) {
+		angle += clockwise ? -angleOffset : angleOffset;
+		GLfloat radian = (clockwise ? -angleOffset : angleOffset) * PI / 180.0f;
+
 		for (int i = 0; i < 8; i++) {
 			GLfloat distX = vertices[i].pos.x - base.x;
 			GLfloat distY = vertices[i].pos.y - base.y;
 
-			vertices[i].pos.x = base.x + (distX * cos((clockwise ? -angleOffset : angleOffset) * PI / 180.0f) - distY * sin((clockwise ? -angleOffset : angleOffset) * PI / 180.0f));
-			vertices[i].pos.y = base.y + (distX * sin((clockwise ? -angleOffset : angleOffset) * PI / 180.0f) + distY * cos((clockwise ? -angleOffset : angleOffset) * PI / 180.0f));
+			vertices[i].pos.x = base.x + (distX * cos(radian) - distY * sin(radian));
+			vertices[i].pos.y = base.y + (distX * sin(radian) + distY * cos(radian));
+		}
+
+		center.x = base.x + (center.x - base.x) * cos(radian) - (center.y - base.y) * sin(radian);
+		center.y = base.y + (center.x - base.x) * sin(radian) + (center.y - base.y) * cos(radian);
+	}
+
+	void breathing() {
+		for (int i = 0; i < 8; i++) {
+			GLfloat radius = (i < 4) ? radInner : radOuter;
+			breathAmount += breath ? 0.0001f : -0.0001f;
+			radius += breathAmount;
+
+			if ((breathAmount >= 0.05f && breath) || (breathAmount <= -0.01f && !breath)) {
+				breath = !breath;
+			}
+
+			GLfloat currAngle = (i < 4) ? (i * 90.0f + 45.0f + angle) : (i * 90.0f + angle);
+
+			vertices[i].pos.x = center.x + radius * cos(currAngle * PI / 180.0f);
+			vertices[i].pos.y = center.y + radius * sin(currAngle * PI / 180.0f);
 		}
 	}
 };
@@ -234,6 +257,7 @@ GLvoid Timer(int value) {
 	if (pause || value != clockwise) return;
 	for (auto& s : shapeList) {
 		s.spin(spinBase, clockwise);
+		s.breathing();
 		renderer.updateVBO(s, &s - &shapeList[0]);
 	}
 	glutPostRedisplay();
